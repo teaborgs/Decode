@@ -69,6 +69,15 @@ public class TumblerSystem extends AbstractSystem
 		}
 	}
 
+	public void setPosition(double position) {
+		tumbler.setPosition(position);
+	}
+
+	public double getPosition() {
+		return tumbler.getPosition();
+	}
+
+
 	public Action setDestinationAction(TumblerDestination destination)
 	{
 		return new InstantAction(() -> setDestination(destination));

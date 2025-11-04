@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.teleop;/*package org.firstinspires.ftc.teamcode.teleop;
+package org.firstinspires.ftc.teamcode.teleop;package org.firstinspires.ftc.teamcode.teleop;
 
 import static org.firstinspires.ftc.teamcode.Utilities.setTimeout;
 
@@ -21,7 +21,7 @@ import org.firstinspires.ftc.vision.opencv.ColorBlobLocatorProcessor;
 import java.util.List;
 
 @TeleOp(name = "\uD83D\uDC79Fane\uD83D\uDC79 Op", group = "TeleOp")
-public final class FaneOp extends BaseOpMode
+public final class chr extends BaseOpMode
 {
 	private InputSystem driveInput, armInput;
 
