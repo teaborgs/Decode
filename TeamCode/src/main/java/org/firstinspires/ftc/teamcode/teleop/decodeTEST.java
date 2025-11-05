@@ -6,16 +6,16 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.BaseOpMode;
 import org.firstinspires.ftc.teamcode.InputSystem;
-import org.firstinspires.ftc.teamcode.RobotHardwareDECODE;
+import org.firstinspires.ftc.teamcode.RobotHardwareTEST;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem.IntakeDirection;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@TeleOp(name = "decodeOP", group = "TeleOp")
-public final class decode extends BaseOpMode
+@TeleOp(name = "decodeTEST", group = "TeleOp")
+public final class decodeTEST extends BaseOpMode
 {
 	private InputSystem driveInput, armInput;
 
-	private RobotHardwareDECODE robot;
+	private RobotHardwareTEST robot;
 
 	private static class Keybindings
 	{
@@ -70,19 +70,19 @@ public final class decode extends BaseOpMode
 	@Override
 	protected void OnStart()
 	{
-		robot = new RobotHardwareDECODE(hardwareMap);
+		robot = new RobotHardwareTEST(hardwareMap);
 		robot.init();
-		shooterPosition = robot.turretTumbler.getPosition();
+		//shooterPosition = robot.turretTumbler.getPosition();
 	}
 
 	@Override
 	protected void OnRun()
 	{
 		Drive();
-		Shooter();
+		/*Shooter();
 		Turret();
 		ShooterAngle();
-		Intake();
+		Intake();*/
 
 	}
 
@@ -96,8 +96,8 @@ public final class decode extends BaseOpMode
 						(driveInput.getValue(Keybindings.Drive.DRIVE_ROT_L) - driveInput.getValue(Keybindings.Drive.DRIVE_ROT_R)) * speed
 				)
 		);
-	}
-
+	}}
+/*
 	private static final double TURRET_DEADZONE = 0.12;
 	private static final double SHOOTER_DEADZONE = 0.15;
 	private double shooterPosition = 0.5; // trb tunat
@@ -152,4 +152,4 @@ public final class decode extends BaseOpMode
 			robot.intakeTumbler.setDestination(TumblerSystem.TumblerDestination.IDLE); //cred ca il pastrez?
 		}
 	}
-}
+}*/
