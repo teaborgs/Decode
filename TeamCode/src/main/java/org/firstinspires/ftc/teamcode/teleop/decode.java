@@ -102,11 +102,6 @@ public final class decode extends BaseOpMode
 	private static final double SHOOTER_DEADZONE = 0.15;
 	private double shooterPosition = 0.5; // trb tunat
 
-
-
-
-
-
 	private void Shooter() {
 		if (driveInput.isPressed(Keybindings.Drive.SHOOTER_KEY)) {
 			robot.outtake.setIntakeDirection(IntakeDirection.FORWARD);

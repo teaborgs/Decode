@@ -34,11 +34,12 @@ public final class decodeTEST extends BaseOpMode
 		public static class Drive
 		{
 			public static final InputSystem.Key SHOOTER_KEY = new InputSystem.Key("a");
-			public static final InputSystem.Key INTAKE_KEY = new InputSystem.Key("right_bumper");
+
 			public static final InputSystem.Axis TURRET_ANGLE = new InputSystem.Axis("right_stick_x");
 			public static final InputSystem.Axis SHOOTER_ANGLE = new InputSystem.Axis("right_stick_y");
 
 			public static final InputSystem.Key SUPPRESS_KEY = new InputSystem.Key("left_bumper");
+			public static final InputSystem.Key TURBO_KEY = new InputSystem.Key("right_bumper");
 			public static final InputSystem.Axis DRIVE_X = new InputSystem.Axis("left_stick_x");
 			public static final InputSystem.Axis DRIVE_Y = new InputSystem.Axis("left_stick_y");
 			public static final InputSystem.Axis DRIVE_ROT_L = new InputSystem.Axis("left_trigger");
@@ -88,8 +89,9 @@ public final class decodeTEST extends BaseOpMode
 
 	private void Drive()
 	{
-		float speed = 1f;
+		float speed = 0.7f;
         if (driveInput.isPressed(Keybindings.Drive.SUPPRESS_KEY)) speed = 0.4f;
+		else if (driveInput.isPressed(Keybindings.Drive.TURBO_KEY)) speed = 1.0f;
 		robot.drivetrain.setDrivePowers(
 				new PoseVelocity2d(new Vector2d(driveInput.getValue(Keybindings.Drive.DRIVE_Y),
 						driveInput.getValue(Keybindings.Drive.DRIVE_X)).times(-speed),
