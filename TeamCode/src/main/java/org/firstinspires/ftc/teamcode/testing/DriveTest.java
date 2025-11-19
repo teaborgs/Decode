@@ -43,7 +43,7 @@ public final class DriveTest extends BaseOpMode
 		mecanumDrive.setDrivePowers(
 				new PoseVelocity2d(new Vector2d(input1.getValue(DRIVE_Y),
 						input1.getValue(DRIVE_X)).times(speed),
-						input1.getValue(DRIVE_ROT_L) + input1.getValue(DRIVE_ROT_R)
+						input1.getValue(DRIVE_ROT_R) - input1.getValue(DRIVE_ROT_L)
 				)
 		);
 	}

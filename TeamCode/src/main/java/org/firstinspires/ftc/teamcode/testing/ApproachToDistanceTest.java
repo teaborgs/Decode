@@ -33,7 +33,7 @@ public class ApproachToDistanceTest extends BaseOpMode
 	{
 		Actions.runBlocking(RunSequentially(
 				WaitFor(1),
-				robot.lift.moveLiftTo(LiftSystem.LiftLevel.CHAMBER_HIGH_FIXED_CLAW),
+			//	robot.lift.moveLiftTo(LiftSystem.LiftLevel.CHAMBER_HIGH_FIXED_CLAW),
 				robot.distanceSystem.ApproachAndPlace(robot, 11, 13),
 				WaitFor(30)
 		));

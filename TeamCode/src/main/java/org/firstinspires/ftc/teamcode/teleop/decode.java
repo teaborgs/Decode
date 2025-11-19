@@ -6,16 +6,16 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.BaseOpMode;
 import org.firstinspires.ftc.teamcode.InputSystem;
-import org.firstinspires.ftc.teamcode.RobotHardwareDECODE;
+import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem.IntakeDirection;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@TeleOp(name = "decodeOP", group = "TeleOp")
+@TeleOp(name = "\uD80C\uDC1B\uD83C\uDF46decodeaza-mi-l\uD80C\uDC1B\uD83C\uDF46", group = "TeleOp")
 public final class decode extends BaseOpMode
 {
 	private InputSystem driveInput, armInput;
 
-	private RobotHardwareDECODE robot;
+	private RobotHardware robot;
 
 	private static class Keybindings
 	{
@@ -34,6 +34,7 @@ public final class decode extends BaseOpMode
 		public static class Drive
 		{
 			public static final InputSystem.Key SHOOTER_KEY = new InputSystem.Key("a");
+			public static final InputSystem.Key INTAKE_REVERSE_KEY = new InputSystem.Key("b");
 			public static final InputSystem.Key INTAKE_KEY = new InputSystem.Key("right_bumper");
 			public static final InputSystem.Axis TURRET_ANGLE = new InputSystem.Axis("right_stick_x");
 			public static final InputSystem.Axis SHOOTER_ANGLE = new InputSystem.Axis("right_stick_y");
@@ -70,7 +71,7 @@ public final class decode extends BaseOpMode
 	@Override
 	protected void OnStart()
 	{
-		robot = new RobotHardwareDECODE(hardwareMap);
+		robot = new RobotHardware(hardwareMap);
 		robot.init();
 		shooterPosition = robot.turretTumbler.getPosition();
 	}
@@ -105,8 +106,10 @@ public final class decode extends BaseOpMode
 	private void Shooter() {
 		if (driveInput.isPressed(Keybindings.Drive.SHOOTER_KEY)) {
 			robot.outtake.setIntakeDirection(IntakeDirection.FORWARD);
+			robot.intakeStopper.setDestination(TumblerSystem.TumblerDestination.TRANSFER);
 		} else {
 			robot.outtake.setIntakeDirection(IntakeDirection.STOP);
+			robot.intakeStopper.setDestination(TumblerSystem.TumblerDestination.IDLE);
 		}
 	}
 
@@ -115,13 +118,10 @@ public final class decode extends BaseOpMode
 
 		if (Math.abs(input) < SHOOTER_DEADZONE) return;
 
-		shooterPosition += input * 0.02;              // sensitivity
+		shooterPosition += input * 0.01;              // sensitivity
 		shooterPosition = Math.max(0, Math.min(1, shooterPosition));
 
 		robot.turretTumbler.setPosition(shooterPosition);
-
-		telemetry.addData("Shooter Angle Pos", shooterPosition); //sterge dupa teste
-		telemetry.update();
 	}
 
 	private void Turret(){
@@ -132,19 +132,19 @@ public final class decode extends BaseOpMode
 			return;
 		}
 		if (x > 0) {
-			robot.turret.setIntakeDirection(IntakeDirection.FORWARD);
+			robot.turret.setIntakeDirection(IntakeDirection.SLOW_FORWARD);
 		} else {
-			robot.turret.setIntakeDirection(IntakeDirection.REVERSE);
+			robot.turret.setIntakeDirection(IntakeDirection.SLOW_REVERSE);
 		}
 	}
 
 	private void Intake() {
 		if (driveInput.isPressed(Keybindings.Drive.INTAKE_KEY)) {
 			robot.intake.setIntakeDirection(IntakeDirection.FORWARD);
-			robot.intakeTumbler.setDestination(TumblerSystem.TumblerDestination.BUSY); //trb facute pozitiile
+		} else if (driveInput.isPressed(Keybindings.Drive.INTAKE_REVERSE_KEY)) {
+			robot.intake.setIntakeDirection(IntakeDirection.REVERSE);
 		} else {
 			robot.intake.setIntakeDirection(IntakeDirection.STOP);
-			robot.intakeTumbler.setDestination(TumblerSystem.TumblerDestination.IDLE); //cred ca il pastrez?
 		}
 	}
 }

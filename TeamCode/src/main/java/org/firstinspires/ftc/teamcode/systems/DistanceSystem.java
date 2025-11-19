@@ -55,10 +55,10 @@ public class DistanceSystem extends AbstractSystem
 					Vector2d linearVel = new Vector2d(-0.3, 0);
 					double angularVel = 0;
 
-					if (GetAverageDistanceCM() <= releaseDistCm)
+					/*if (GetAverageDistanceCM() <= releaseDistCm)
 					{
 						robot.lift.setLiftLevel(LiftSystem.LiftLevel.CHAMBER_HIGH_PLACE_FIXED_CLAW);
-					}
+					}*/
 
 					if (Math.abs(GetLeftDistanceCM() - GetRightDistanceCM()) > headingToleranceCM && GetAverageDistanceCM() < 40)
 					{
