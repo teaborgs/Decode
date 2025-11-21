@@ -9,16 +9,15 @@ import org.firstinspires.ftc.teamcode.InputSystem;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem.IntakeDirection;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
+import org.firstinspires.ftc.teamcode.systems.TransferSystem;
 
 @TeleOp(name = "\uD80C\uDC1B\uD83C\uDF46decodeaza-mi-l\uD80C\uDC1B\uD83C\uDF46", group = "TeleOp")
-public final class decode extends BaseOpMode
-{
+public final class decode extends BaseOpMode {
 	private InputSystem driveInput, armInput;
 
 	private RobotHardware robot;
 
-	private static class Keybindings
-	{
+	private static class Keybindings {
 		//ramane de vazut cum facem cu driver2 :)
 		/*public static class Arm
 		{
@@ -31,8 +30,7 @@ public final class decode extends BaseOpMode
 			public static final InputSystem.Key CANCEL_SUSPEND_KEY = new InputSystem.Key("x");
 		}*/
 
-		public static class Drive
-		{
+		public static class Drive {
 			public static final InputSystem.Key SHOOTER_KEY = new InputSystem.Key("a");
 			public static final InputSystem.Key INTAKE_REVERSE_KEY = new InputSystem.Key("b");
 			public static final InputSystem.Key INTAKE_KEY = new InputSystem.Key("right_bumper");
@@ -56,8 +54,7 @@ public final class decode extends BaseOpMode
 
 	@Override
 
-	protected void OnInitialize()
-	{
+	protected void OnInitialize() {
 		driveInput = input1;
 		armInput = input2;
 	}
@@ -69,16 +66,14 @@ public final class decode extends BaseOpMode
 	}
 
 	@Override
-	protected void OnStart()
-	{
+	protected void OnStart() {
 		robot = new RobotHardware(hardwareMap);
 		robot.init();
 		shooterPosition = robot.turretTumbler.getPosition();
 	}
 
 	@Override
-	protected void OnRun()
-	{
+	protected void OnRun() {
 		Drive();
 		Shooter();
 		Turret();
@@ -87,10 +82,9 @@ public final class decode extends BaseOpMode
 
 	}
 
-	private void Drive()
-	{
+	private void Drive() {
 		float speed = 1f;
-        if (driveInput.isPressed(Keybindings.Drive.SUPPRESS_KEY)) speed = 0.4f;
+		if (driveInput.isPressed(Keybindings.Drive.SUPPRESS_KEY)) speed = 0.4f;
 		robot.drivetrain.setDrivePowers(
 				new PoseVelocity2d(new Vector2d(driveInput.getValue(Keybindings.Drive.DRIVE_Y),
 						driveInput.getValue(Keybindings.Drive.DRIVE_X)).times(-speed),
@@ -101,14 +95,19 @@ public final class decode extends BaseOpMode
 
 	private static final double TURRET_DEADZONE = 0.12;
 	private static final double SHOOTER_DEADZONE = 0.15;
+	private boolean transfer_servo = false;
 	private double shooterPosition = 0.5; // trb tunat
 
 	private void Shooter() {
 		if (driveInput.isPressed(Keybindings.Drive.SHOOTER_KEY)) {
 			robot.outtake.setIntakeDirection(IntakeDirection.FORWARD);
+			transfer_servo = true;
 			robot.intakeStopper.setDestination(TumblerSystem.TumblerDestination.TRANSFER);
-		} else {
+
+		}
+		else {
 			robot.outtake.setIntakeDirection(IntakeDirection.STOP);
+			transfer_servo = false;
 			robot.intakeStopper.setDestination(TumblerSystem.TumblerDestination.IDLE);
 		}
 	}
@@ -124,7 +123,7 @@ public final class decode extends BaseOpMode
 		robot.turretTumbler.setPosition(shooterPosition);
 	}
 
-	private void Turret(){
+	private void Turret() {
 		double x = driveInput.getValue(Keybindings.Drive.TURRET_ANGLE);
 
 		if (Math.abs(x) < TURRET_DEADZONE) {
@@ -133,17 +132,23 @@ public final class decode extends BaseOpMode
 		}
 		if (x > 0) {
 			robot.turret.setIntakeDirection(IntakeDirection.SLOW_FORWARD);
-		} else {
+		}
+		else {
 			robot.turret.setIntakeDirection(IntakeDirection.SLOW_REVERSE);
 		}
 	}
 
 	private void Intake() {
 		if (driveInput.isPressed(Keybindings.Drive.INTAKE_KEY)) {
+			if(transfer_servo)
+			robot.transfer.start();
 			robot.intake.setIntakeDirection(IntakeDirection.FORWARD);
-		} else if (driveInput.isPressed(Keybindings.Drive.INTAKE_REVERSE_KEY)) {
+		}
+		else if (driveInput.isPressed(Keybindings.Drive.INTAKE_REVERSE_KEY)) {
 			robot.intake.setIntakeDirection(IntakeDirection.REVERSE);
-		} else {
+		}
+		else {
+			robot.transfer.stop();
 			robot.intake.setIntakeDirection(IntakeDirection.STOP);
 		}
 	}

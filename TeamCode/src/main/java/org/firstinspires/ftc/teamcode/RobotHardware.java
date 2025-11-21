@@ -1,12 +1,14 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.acmerobotics.roadrunner.Pose2d;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.teamcode.systems.DistanceSystem;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem;
+import org.firstinspires.ftc.teamcode.systems.TransferSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
 public final class RobotHardware {
@@ -14,6 +16,7 @@ public final class RobotHardware {
 	public TumblerSystem intakeStopper, turretTumbler;
 	public DistanceSystem distanceSystem;
 	public IntakeSystem intake, outtake, turret;
+	public TransferSystem transfer;
 
 	public RobotHardware(HardwareMap hardwareMap) {
 		drivetrain = new MecanumDrive(hardwareMap, new Pose2d(0, 0, 0));
@@ -21,6 +24,7 @@ public final class RobotHardware {
 		intake = new IntakeSystem(hardwareMap.get(DcMotorEx.class, "intake"));
 		outtake = new IntakeSystem(hardwareMap.get(DcMotorEx.class, "outtake"));
 		turret = new IntakeSystem(hardwareMap.get(DcMotorEx.class, "turret"));
+		transfer = new TransferSystem(hardwareMap.get(CRServo.class, "transfer"));
 
 
 		intakeStopper = new TumblerSystem(hardwareMap.get(Servo.class, "intakeStopper"), 0.2f, 0.36f, 0.15f, 0.3f, 0.38f);
@@ -37,6 +41,7 @@ public final class RobotHardware {
 		turret.init();
 		outtake.init();
 		intake.init();
+		transfer.init();
 
 	}
 }
