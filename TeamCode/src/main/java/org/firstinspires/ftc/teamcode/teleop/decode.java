@@ -4,12 +4,18 @@ import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.BaseOpMode;
 import org.firstinspires.ftc.teamcode.InputSystem;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem.IntakeDirection;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 import org.firstinspires.ftc.teamcode.systems.TransferSystem;
+
+import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.LLResultTypes;
+import com.qualcomm.hardware.limelightvision.LLStatus;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 
 @TeleOp(name = "\uD80C\uDC1B\uD83C\uDF46decodeaza-mi-l\uD80C\uDC1B\uD83C\uDF46", group = "TeleOp")
 public final class decode extends BaseOpMode {
@@ -79,7 +85,7 @@ public final class decode extends BaseOpMode {
 		Turret();
 		ShooterAngle();
 		Intake();
-
+		UpdateLimelight();
 	}
 
 	private void Drive() {
@@ -97,6 +103,10 @@ public final class decode extends BaseOpMode {
 	private static final double SHOOTER_DEADZONE = 0.15;
 	private boolean transfer_servo = false;
 	private double shooterPosition = 0.5; // trb tunat
+
+	private void UpdateLimelight() {
+
+	}
 
 	private void Shooter() {
 		if (driveInput.isPressed(Keybindings.Drive.SHOOTER_KEY)) {
@@ -151,5 +161,25 @@ public final class decode extends BaseOpMode {
 			robot.transfer.stop();
 			robot.intake.setIntakeDirection(IntakeDirection.STOP);
 		}
+	}
+
+	double lastTx = -1, lastTy = -1, lastTa = -1;
+
+	@Override
+	protected void OnTelemetry(Telemetry telemetry)
+	{
+		super.OnTelemetry(telemetry);
+		LLResult result = robot.limelight.getLatestResult();
+
+		if (result != null && result.isValid()) {
+			lastTx = result.getTx(); // offset pe orizontală
+			lastTy = result.getTy(); // offset pe verticală
+			lastTa = result.getTa(); // area (mărimea țintei)
+		}
+
+		telemetry.addData("LL tx", lastTx);
+		telemetry.addData("LL ty", lastTy);
+		telemetry.addData("LL ta", lastTa);
+		telemetry.addData("LL Last Update", robot.limelight.getTimeSinceLastUpdate());
 	}
 }

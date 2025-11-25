@@ -1,5 +1,5 @@
 package org.firstinspires.ftc.teamcode.autonomous;
-
+/*
 import static org.firstinspires.ftc.teamcode.Utilities.RunInParallel;
 import static org.firstinspires.ftc.teamcode.Utilities.RunSequentially;
 import static org.firstinspires.ftc.teamcode.Utilities.WaitFor;
@@ -298,4 +298,4 @@ public class Autonom_Stanga_Nou_ extends BaseOpMode
 		//red > 3000 && red < 6000 && green < 5000 && blue < 3000;
 	}
 }
-
+*/
