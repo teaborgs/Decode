@@ -51,6 +51,7 @@ public final class RobotHardware {
 		transfer.init();
 		limelight.start();
 		limelight.setPollRateHz(50);
+		limelight.pipelineSwitch(0); 
 
 	}
 }
