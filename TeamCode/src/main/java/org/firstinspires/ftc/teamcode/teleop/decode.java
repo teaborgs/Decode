@@ -28,18 +28,6 @@ public final class decode extends BaseOpMode {
 	private RobotHardware robot;
 
 	private static class Keybindings {
-		//ramane de vazut cum facem cu driver2 :)
-		/*public static class Arm
-		{
-			public static final InputSystem.Key BASKET_LOW_KEY = new InputSystem.Key("dpad_down");
-			public static final InputSystem.Key BASKET_HIGH_KEY = new InputSystem.Key("dpad_up");
-			public static final InputSystem.Key CHAMBER_HIGH_KEY = new InputSystem.Key("dpad_left");
-			public static final InputSystem.Key PRIMARY_KEY = new InputSystem.Key("a");
-			public static final InputSystem.Key SPECIMEN_KEY = new InputSystem.Key("b");
-			public static final InputSystem.Key SUSPEND_KEY = new InputSystem.Key("y");
-			public static final InputSystem.Key CANCEL_SUSPEND_KEY = new InputSystem.Key("x");
-		}*/
-
 		public static class Drive {
 			public static final InputSystem.Key SHOOTER_KEY = new InputSystem.Key("a");
 			public static final InputSystem.Key INTAKE_REVERSE_KEY = new InputSystem.Key("b");
@@ -59,11 +47,12 @@ public final class decode extends BaseOpMode {
 			public static final InputSystem.Key GRAB_HOLD_KEY = new InputSystem.Key("b");
 			public static final InputSystem.Key GRAB_WALL_KEY = new InputSystem.Key("x");
 			public static final InputSystem.Key GRAB_RESET_KEY = new InputSystem.Key("y");
+
+			public static final InputSystem.Key AUTO_SHOOTER_ENABLE_KEY = new InputSystem.Key("start");
 		}
 	}
 
 	@Override
-
 	protected void OnInitialize() {
 		driveInput = input1;
 		armInput = input2;
@@ -84,13 +73,16 @@ public final class decode extends BaseOpMode {
 
 	@Override
 	protected void OnRun() {
+		if (!autoShooterAngle && driveInput.isPressed(Keybindings.Drive.AUTO_SHOOTER_ENABLE_KEY)) {
+			autoShooterAngle = true;
+		}
+
 		Drive();
 		Shooter();
 		Turret();
 		ShooterAngle();
 		Intake();
 		UpdateLimelight();
-
 	}
 
 	private void Drive() {
@@ -108,103 +100,134 @@ public final class decode extends BaseOpMode {
 	private static final double SHOOTER_DEADZONE = 0.15;
 	private boolean transfer_servo = false;
 	private boolean auto_aim = true;
-	private double shooterPosition = 0.5; // trb tunat
-	private static final double TURRET_LL_DEADZONE = 1.5;
-	;
-	private void UpdateLimelight() {
+	private double shooterPosition = 0.5;
 
-	}
+	private static final double TURRET_LL_DEADZONE = 1.5;
+
+	private boolean autoShooterAngle = false;
+
+	private void UpdateLimelight() {}
 
 	private void Shooter() {
 		if (driveInput.isPressed(Keybindings.Drive.SHOOTER_KEY)) {
-			robot.outtake.setIntakeDirection(IntakeDirection.FORWARD);
+			robot.outtake1.setIntakeDirection(IntakeDirection.FORWARD);
+			robot.outtake2.setIntakeDirection(IntakeDirection.FORWARD);
 			transfer_servo = true;
 			robot.intakeStopper.setDestination(TumblerSystem.TumblerDestination.TRANSFER);
 
 		}
 		else {
-			robot.outtake.setIntakeDirection(IntakeDirection.STOP);
+			robot.outtake1.setIntakeDirection(IntakeDirection.STOP);
+			robot.outtake2.setIntakeDirection(IntakeDirection.STOP);
 			transfer_servo = false;
 			robot.intakeStopper.setDestination(TumblerSystem.TumblerDestination.IDLE);
 		}
 	}
 
+	// === helper: calculează distanța din Limelight (în cm) ===
+	private Double getDistanceCmFromLimelight() {
+		if (robot == null || robot.limelight == null) return null;
+
+		LLResult result = robot.limelight.getLatestResult();
+		if (result == null || !result.isValid()) return null;
+
+		double ty = result.getTy();
+
+		double limelightMountAngleDegrees = 85.0;
+		double limelightLensHeightCm = 55.88;   // 22 inch
+		double goalHeightCm = 152.4;            // 60 inch
+
+		double angleToGoalDegrees = limelightMountAngleDegrees + ty;
+		double angleToGoalRadians = Math.toRadians(angleToGoalDegrees);
+
+		if (Math.abs(angleToGoalRadians) < 0.001) return null;
+
+		double distanceFromLimelightToGoalCm =
+				(goalHeightCm - limelightLensHeightCm) / Math.tan(angleToGoalRadians);
+
+		return distanceFromLimelightToGoalCm;
+	}
+
+	// === helper: mapare distanță -> poziție servo în CM ===
+	private double shooterAngleFromDistanceCm(double distanceCm) {
+		double dNear = 250.0;
+		double posNear=0.5;
+
+
+		double dFar = 251.0;
+		double posFar = 0.60;
+
+		if (distanceCm <= 250.0 && distanceCm>=160.0) return shooterPosition=posNear;
+		if(distanceCm<=160.0 && distanceCm>=100.0) return shooterPosition=0.4;
+		if(distanceCm<=100.0 && distanceCm>=60) return shooterPosition=0.2;
+		if(distanceCm<=60.0) return shooterPosition=0.0;
+		if (distanceCm >= dFar) return shooterPosition=posFar;
+
+		return posNear + (distanceCm - dNear) * (posFar - posNear) / (dFar - dNear);
+	}
+
 	private void ShooterAngle() {
-		double input = -driveInput.getValue(Keybindings.Drive.SHOOTER_ANGLE); // invert?
+
+		if (autoShooterAngle) {
+			Double distanceCm = getDistanceCmFromLimelight();
+			if (distanceCm == null) return;
+
+			shooterPosition = shooterAngleFromDistanceCm(distanceCm);
+
+			if (shooterPosition < 0.0) shooterPosition = 0.0;
+			if (shooterPosition > 1.0) shooterPosition = 1.0;
+
+			robot.turretTumbler.setPosition(shooterPosition);
+			return;
+		}
+
+		// manual
+		double input = -driveInput.getValue(Keybindings.Drive.SHOOTER_ANGLE);
 
 		if (Math.abs(input) < SHOOTER_DEADZONE) return;
 
-		shooterPosition += input * 0.01;              // sensitivity
-		shooterPosition = Math.max(0, Math.min(1, shooterPosition));
+		shooterPosition += input * 0.01;
+		if (shooterPosition < 0.0) shooterPosition = 0.0;
+		if (shooterPosition > 1.0) shooterPosition = 1.0;
 
 		robot.turretTumbler.setPosition(shooterPosition);
-		LLResult result = robot.limelight.getLatestResult();
-		double ty = result.getTy(); // offset pe orizontala
-		double targetOffsetAngle_Vertical = result.getTy();
-
-
-		// how many degrees back is your limelight rotated from perfectly vertical?
-		double limelightMountAngleDegrees = 10.0;
-
-		// distance from the center of the Limelight lens to the floor
-		double limelightLensHeightInches = 22.0;
-
-		// distance from the target to the floor
-		double goalHeightInches = 60.0;
-
-		double angleToGoalDegrees = limelightMountAngleDegrees + targetOffsetAngle_Vertical;
-		double angleToGoalRadians = angleToGoalDegrees * (3.14159 / 180.0);
-
-		//calculate distance
-		double distanceFromLimelightToGoalInches = (goalHeightInches - limelightLensHeightInches) / Math.tan(angleToGoalRadians);
-
 	}
 
 	private void Turret() {
 		double x = driveInput.getValue(Keybindings.Drive.TURRET_ANGLE);
 
-
-
 		if(!auto_aim){
-		if (Math.abs(x) < TURRET_DEADZONE) {
-			robot.turret.setIntakeDirection(IntakeDirection.STOP);
-			return;
-		}
-		if (x > 0) {
-			robot.turret.setIntakeDirection(IntakeDirection.SLOW_FORWARD);
+			if (Math.abs(x) < TURRET_DEADZONE) {
+				robot.turret.setIntakeDirection(IntakeDirection.STOP);
+				return;
+			}
+			if (x > 0) robot.turret.setIntakeDirection(IntakeDirection.SLOW_FORWARD);
+			else robot.turret.setIntakeDirection(IntakeDirection.SLOW_REVERSE);
 		}
 		else {
-			robot.turret.setIntakeDirection(IntakeDirection.SLOW_REVERSE);
-		}}
-		else if(auto_aim){
 
 			LLResult result = robot.limelight.getLatestResult();
-			double tx = result.getTx(); // offset pe orizontala
-
 			if (result == null || !result.isValid()) {
-				robot.turret.setIntakeDirection(IntakeDirection.STOP); //opreste tureta daca nu vede apriltag...teoretic
+				robot.turret.setIntakeDirection(IntakeDirection.STOP);
 				return;
 			}
 
+			double tx = result.getTx();
+
 			if (Math.abs(tx) < TURRET_LL_DEADZONE) {
-				// centrat( cu spatiu de eroare )
 				robot.turret.setIntakeDirection(IntakeDirection.STOP);
 			} else if (tx > 0) {
-				// se intoarce spre dreapta
 				robot.turret.setIntakeDirection(IntakeDirection.SLOW_FORWARD);
-			} else if (tx < 0){
-				// se intoarce spre stanga
+			} else {
 				robot.turret.setIntakeDirection(IntakeDirection.SLOW_REVERSE);
 			}
-
 		}
-
 	}
 
 	private void Intake() {
 		if (driveInput.isPressed(Keybindings.Drive.INTAKE_KEY)) {
 			if(transfer_servo)
-			robot.transfer.start();
+				robot.transfer.start();
 			robot.intake.setIntakeDirection(IntakeDirection.FORWARD);
 		}
 		else if (driveInput.isPressed(Keybindings.Drive.INTAKE_REVERSE_KEY)) {
@@ -223,52 +246,50 @@ public final class decode extends BaseOpMode {
 	{
 		super.OnTelemetry(telemetry);
 
-		// --- Preluare date Limelight ---
 		LLResult result = robot.limelight.getLatestResult();
 
 		double tx = -1, ty = -1, ta = -1;
-		double distanceInches = -1;
+		double distanceCm = -1;
 		boolean hasTarget = false;
 
 		if (result != null && result.isValid())
 		{
-
 			tx = result.getTx();
 			ty = result.getTy();
 			ta = result.getTa();
 			hasTarget = true;
 
-			// --- CALCUL DISTANȚĂ AICI, ÎN TELEMETRY ---
-			double limelightMountAngleDegrees = 10.0;
-			double limelightLensHeightInches = 22.0;
-			double goalHeightInches = 60.0;
+			double limelightMountAngleDegrees = 85.0;
+			double limelightLensHeightCm = 45.0;
+			double goalHeightCm = 105.0;
 
-			// unghi total spre target
 			double angleToGoalDegrees = limelightMountAngleDegrees + ty;
 			double angleToGoalRadians = Math.toRadians(angleToGoalDegrees);
 
-			// protecție: dacă unghiul e prea mic, nu calculăm
 			if (Math.abs(angleToGoalRadians) > 0.001)
 			{
-				distanceInches =
-						(goalHeightInches - limelightLensHeightInches) /
+				distanceCm =
+						(goalHeightCm - limelightLensHeightCm) /
 								Math.tan(angleToGoalRadians);
 			}
 			else
 			{
-				distanceInches = -1;
+				distanceCm = -1;
 				hasTarget = false;
 			}
 		}
 
-		// --- TELEMETRY OUTPUT ---
 		telemetry.addData("LL tx", tx);
 		telemetry.addData("LL ty", ty);
 		telemetry.addData("LL ta", ta);
 		telemetry.addData("LL Last Update", robot.limelight.getTimeSinceLastUpdate());
 
 		if (hasTarget)
-			telemetry.addData("LL Distance (in)", distanceInches);
+			telemetry.addData("LL Distance (cm)", distanceCm);
 		else
 			telemetry.addData("LL Distance", "NO TARGET");
-	}}
+
+		telemetry.addData("Auto Shooter Angle", autoShooterAngle ? "ON" : "OFF");
+		telemetry.addData("Shooter Pos", shooterPosition);
+	}
+}

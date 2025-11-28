@@ -19,7 +19,7 @@ public final class RobotHardware {
 	public final MecanumDrive drivetrain;
 	public TumblerSystem intakeStopper, turretTumbler;
 	public DistanceSystem distanceSystem;
-	public IntakeSystem intake, outtake, turret;
+	public IntakeSystem intake, outtake1, outtake2, turret;
 	public TransferSystem transfer;
 	public Limelight3A limelight;
 
@@ -27,7 +27,8 @@ public final class RobotHardware {
 		drivetrain = new MecanumDrive(hardwareMap, new Pose2d(0, 0, 0));
 
 		intake = new IntakeSystem(hardwareMap.get(DcMotorEx.class, "intake"));
-		outtake = new IntakeSystem(hardwareMap.get(DcMotorEx.class, "outtake"));
+		outtake1 = new IntakeSystem(hardwareMap.get(DcMotorEx.class, "outtake1"));
+		outtake2 = new IntakeSystem(hardwareMap.get(DcMotorEx.class, "outtake2"));
 		turret = new IntakeSystem(hardwareMap.get(DcMotorEx.class, "turret"));
 		transfer = new TransferSystem(hardwareMap.get(CRServo.class, "transfer"));
 
@@ -46,7 +47,8 @@ public final class RobotHardware {
 
 
 		turret.init();
-		outtake.init();
+		outtake1.init();
+		outtake2.init();
 		intake.init();
 		transfer.init();
 		limelight.start();
