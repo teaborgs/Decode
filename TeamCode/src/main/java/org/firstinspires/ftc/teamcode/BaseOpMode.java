@@ -70,7 +70,7 @@ public abstract class BaseOpMode extends LinearOpMode
 		}
 
 		// Run the robot
-		internal_ElapsedTimeSinceStart = new ElapsedTime();
+		/*internal_ElapsedTimeSinceStart = new ElapsedTime();
 		OnStart();
 		Thread telemetryThread = new Thread(() -> {
 			while (!isStopRequested()) {
@@ -86,7 +86,26 @@ public abstract class BaseOpMode extends LinearOpMode
 			OnRun();
 			if (internal_IsAutonomous) break;
 		}
+		OnStop();*/
+
+		internal_ElapsedTimeSinceStart = new ElapsedTime();
+		OnStart();
+
+		while (!isStopRequested()) {
+			internal_LoopTime.reset();
+
+			if (IsDebugRequested()) internal_DebugMode = !internal_DebugMode;
+
+			OnRun();               // logica principală
+			OnTelemetry(telemetry);
+			if (internal_DebugMode) OnDebug();
+			telemetry.update();
+
+			if (internal_IsAutonomous) break;
+				}
+
 		OnStop();
+
 
 		// Stop the robot
 		telemetry.clear();

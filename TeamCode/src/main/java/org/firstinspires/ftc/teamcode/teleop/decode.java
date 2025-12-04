@@ -73,9 +73,20 @@ public final class decode extends BaseOpMode {
 
 	@Override
 	protected void OnRun() {
-		if (!autoShooterAngle && driveInput.isPressed(Keybindings.Drive.AUTO_SHOOTER_ENABLE_KEY)) {
-			autoShooterAngle = true;
+		// === TOGGLE autoShooterAngle with START ===
+		boolean autoShooterKey = driveInput.isPressed(Keybindings.Drive.AUTO_SHOOTER_ENABLE_KEY);
+		if (autoShooterKey && !prevAutoShooterKeyPressed) {
+			autoShooterAngle = !autoShooterAngle;  // toggle
 		}
+		prevAutoShooterKeyPressed = autoShooterKey;
+
+		// === TOGGLE auto_aim with DPAD_UP ===
+		boolean llAimPressed = driveInput.isPressed(Keybindings.Drive.LL_AIM);
+		if (llAimPressed && !prevLlAimPressed) {
+			auto_aim = !auto_aim;  // toggle
+			turretAligned = false; // when switching modes, reset lock state
+		}
+		prevLlAimPressed = llAimPressed;
 
 		Drive();
 		Shooter();
@@ -102,9 +113,16 @@ public final class decode extends BaseOpMode {
 	private boolean auto_aim = true;
 	private double shooterPosition = 0.5;
 
-	private static final double TURRET_LL_DEADZONE = 1.5;
+	private static final double TURRET_LL_DEADZONE_STOP  = 2.0; // when to STOP moving
+	private static final double TURRET_LL_DEADZONE_START = 3.0; // when to START moving again
 
-	private boolean autoShooterAngle = false;
+	private boolean turretAligned = false; // are we currently "locked on"?
+	private boolean prevLlAimPressed = false;
+	private boolean prevAutoShooterKeyPressed = false;
+
+
+
+	private boolean autoShooterAngle = true;
 
 	private void UpdateLimelight() {}
 
@@ -150,38 +168,70 @@ public final class decode extends BaseOpMode {
 
 	// === helper: mapare distanță -> poziție servo în CM ===
 	private double shooterAngleFromDistanceCm(double distanceCm) {
-		double dNear = 250.0;
-		double posNear=0.5;
+		double dNear = -1.0;
+		double posNear=0.65;
 
 
-		double dFar = 251.0;
-		double posFar = 0.60;
+		double dFar = 15.0;
+		double posFar = 0.80;
 
-		if (distanceCm <= 250.0 && distanceCm>=160.0) return shooterPosition=posNear;
-		if(distanceCm<=160.0 && distanceCm>=100.0) return shooterPosition=0.4;
-		if(distanceCm<=100.0 && distanceCm>=60) return shooterPosition=0.2;
-		if(distanceCm<=60.0) return shooterPosition=0.0;
-		if (distanceCm >= dFar) return shooterPosition=posFar;
+		if (distanceCm <= 15.0 && distanceCm>=8.0) return shooterPosition = posNear;
+		else if(distanceCm<=8.0 && distanceCm>=0.0) return shooterPosition=0.3;
+		else if(distanceCm<=0.0 && distanceCm>=-1) return shooterPosition=0.2;
+		else if (distanceCm >= dFar) return shooterPosition=posFar;
+		else return shooterPosition=0.0;
 
-		return posNear + (distanceCm - dNear) * (posFar - posNear) / (dFar - dNear);
+
+	//	return posNear + (distanceCm - dNear) * (posFar - posNear) / (dFar - dNear);
 	}
 
 	private void ShooterAngle() {
 
+		// ==== MOD AUTO (după Limelight / ty) ====
 		if (autoShooterAngle) {
-			Double distanceCm = getDistanceCmFromLimelight();
-			if (distanceCm == null) return;
 
-			shooterPosition = shooterAngleFromDistanceCm(distanceCm);
+			if (robot == null || robot.limelight == null) return;
+			LLResult result = robot.limelight.getLatestResult();
 
-			if (shooterPosition < 0.0) shooterPosition = 0.0;
-			if (shooterPosition > 1.0) shooterPosition = 1.0;
+			if (result != null && result.isValid()) {
+				double ty = result.getTy();
 
-			robot.turretTumbler.setPosition(shooterPosition);
-			return;
+				// calc distanță (FOLOSESC ACELEAȘI VALORI CA ÎN TELEMETRY, să nu mai fie două formule diferite)
+				double limelightMountAngleDegrees = 85.0;
+				double limelightLensHeightCm = 40.0;   // la fel ca în OnTelemetry
+				double goalHeightCm = 105.0;          // la fel ca în OnTelemetry
+
+				double angleToGoalDegrees = limelightMountAngleDegrees + ty;
+				double angleToGoalRadians = Math.toRadians(angleToGoalDegrees);
+
+				Double distanceCm = null;
+				if (Math.abs(angleToGoalRadians) > 0.001) {
+					distanceCm = (goalHeightCm - limelightLensHeightCm) / Math.tan(angleToGoalRadians);
+				}
+
+				if (distanceCm != null) {
+					// mapezi distanța -> poziție servo
+					shooterPosition = shooterAngleFromDistanceCm(distanceCm);
+
+					// clamp 0..1
+					if (shooterPosition < 0.0) shooterPosition = 0.0;
+					if (shooterPosition > 1.0) shooterPosition = 1.0;
+
+					robot.turretTumbler.setPosition(shooterPosition);
+				}
+
+				// DEBUG: vezi exact ce se întâmplă
+				telemetry.addData("AUTO ty", ty);
+				telemetry.addData("AUTO dist", distanceCm);
+				telemetry.addData("AUTO shooterPos", shooterPosition);
+			} else {
+				telemetry.addLine("AUTO: no valid LL result");
+			}
+
+			return; // IMPORTANT: nu mai intri în manual dacă e pe auto
 		}
 
-		// manual
+		// ==== MOD MANUAL (stick dreapta Y) ====
 		double input = -driveInput.getValue(Keybindings.Drive.SHOOTER_ANGLE);
 
 		if (Math.abs(input) < SHOOTER_DEADZONE) return;
@@ -193,34 +243,55 @@ public final class decode extends BaseOpMode {
 		robot.turretTumbler.setPosition(shooterPosition);
 	}
 
+
 	private void Turret() {
 		double x = driveInput.getValue(Keybindings.Drive.TURRET_ANGLE);
 
-		if(!auto_aim){
+		// === MANUAL MODE ===
+		if (!auto_aim) {
 			if (Math.abs(x) < TURRET_DEADZONE) {
 				robot.turret.setIntakeDirection(IntakeDirection.STOP);
 				return;
 			}
 			if (x > 0) robot.turret.setIntakeDirection(IntakeDirection.SLOW_FORWARD);
 			else robot.turret.setIntakeDirection(IntakeDirection.SLOW_REVERSE);
+			return;
 		}
-		else {
 
-			LLResult result = robot.limelight.getLatestResult();
-			if (result == null || !result.isValid()) {
+		// === AUTO AIM MODE ===
+		LLResult result = robot.limelight.getLatestResult();
+		if (result == null || !result.isValid()) {
+			robot.turret.setIntakeDirection(IntakeDirection.STOP);
+			return;
+		}
+
+		double tx = result.getTx();
+		double absTx = Math.abs(tx);
+
+		// --- HYSTERESIS LOGIC ---
+		if (turretAligned) {
+			// We are currently "locked on". Only unlock if error gets bigger than START threshold.
+			if (absTx > TURRET_LL_DEADZONE_START) {
+				turretAligned = false;  // need to move again
+			} else {
+				// Stay aligned & keep turret stopped
 				robot.turret.setIntakeDirection(IntakeDirection.STOP);
 				return;
 			}
-
-			double tx = result.getTx();
-
-			if (Math.abs(tx) < TURRET_LL_DEADZONE) {
+		} else {
+			// We are currently moving/aiming. Lock on once we get within STOP threshold.
+			if (absTx < TURRET_LL_DEADZONE_STOP) {
+				turretAligned = true;
 				robot.turret.setIntakeDirection(IntakeDirection.STOP);
-			} else if (tx > 0) {
-				robot.turret.setIntakeDirection(IntakeDirection.SLOW_FORWARD);
-			} else {
-				robot.turret.setIntakeDirection(IntakeDirection.SLOW_REVERSE);
+				return;
 			}
+		}
+
+		// --- If we're here, we need to move the turret ---
+		if (tx > 0) {
+			robot.turret.setIntakeDirection(IntakeDirection.SLOW_FORWARD);
+		} else {
+			robot.turret.setIntakeDirection(IntakeDirection.SLOW_REVERSE);
 		}
 	}
 
@@ -246,6 +317,11 @@ public final class decode extends BaseOpMode {
 	{
 		super.OnTelemetry(telemetry);
 
+		if (robot == null || robot.limelight == null) {
+			telemetry.addLine("Robot sau Limelight NULL");
+			return;
+		}
+
 		LLResult result = robot.limelight.getLatestResult();
 
 		double tx = -1, ty = -1, ta = -1;
@@ -260,7 +336,7 @@ public final class decode extends BaseOpMode {
 			hasTarget = true;
 
 			double limelightMountAngleDegrees = 85.0;
-			double limelightLensHeightCm = 45.0;
+			double limelightLensHeightCm = 40.0;
 			double goalHeightCm = 105.0;
 
 			double angleToGoalDegrees = limelightMountAngleDegrees + ty;
@@ -279,6 +355,8 @@ public final class decode extends BaseOpMode {
 			}
 		}
 
+		double lastdistanceCm=distanceCm;
+
 		telemetry.addData("LL tx", tx);
 		telemetry.addData("LL ty", ty);
 		telemetry.addData("LL ta", ta);
@@ -290,6 +368,8 @@ public final class decode extends BaseOpMode {
 			telemetry.addData("LL Distance", "NO TARGET");
 
 		telemetry.addData("Auto Shooter Angle", autoShooterAngle ? "ON" : "OFF");
+		telemetry.addData("Last LL Distance", lastdistanceCm);
+		telemetry.addData("Turret Mode", auto_aim ? "AUTO" : "MANUAL");
 		telemetry.addData("Shooter Pos", shooterPosition);
 	}
 }

@@ -33,7 +33,7 @@ public final class RobotHardware {
 		transfer = new TransferSystem(hardwareMap.get(CRServo.class, "transfer"));
 
 
-		intakeStopper = new TumblerSystem(hardwareMap.get(Servo.class, "intakeStopper"), 0.2f, 0.36f, 0.15f, 0.3f, 0.38f);
+		intakeStopper = new TumblerSystem(hardwareMap.get(Servo.class, "intakeStopper"), 0.61f, 0.5f, 0.15f, 0.3f, 0.38f);
 		turretTumbler = new TumblerSystem(hardwareMap.get(Servo.class, "turretTumbler"), 0.50f, 0.85f, 0.25f, 0.4f, 0.68f);
 
 		limelight = hardwareMap.get(Limelight3A.class, "limelight");
