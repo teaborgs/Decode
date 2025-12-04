@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode;
 
 import com.acmerobotics.roadrunner.Pose2d;
 import com.qualcomm.robotcore.hardware.CRServo;
-import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -20,10 +19,9 @@ public final class RobotHardware {
 	public final MecanumDrive drivetrain;
 	public TumblerSystem intakeStopper, turretTumbler;
 	public DistanceSystem distanceSystem;
-	public IntakeSystem intake, outtake1, outtake2;
+	public IntakeSystem intake, outtake1, outtake2, turret;
 	public TransferSystem transfer;
 	public Limelight3A limelight;
-	public DcMotorEx turretMotor;
 
 	public RobotHardware(HardwareMap hardwareMap) {
 		drivetrain = new MecanumDrive(hardwareMap, new Pose2d(0, 0, 0));
@@ -31,7 +29,7 @@ public final class RobotHardware {
 		intake = new IntakeSystem(hardwareMap.get(DcMotorEx.class, "intake"));
 		outtake1 = new IntakeSystem(hardwareMap.get(DcMotorEx.class, "outtake1"));
 		outtake2 = new IntakeSystem(hardwareMap.get(DcMotorEx.class, "outtake2"));
-		turretMotor = hardwareMap.get(DcMotorEx.class, "turret");
+		turret = new IntakeSystem(hardwareMap.get(DcMotorEx.class, "turret"));
 		transfer = new TransferSystem(hardwareMap.get(CRServo.class, "transfer"));
 
 
@@ -48,13 +46,11 @@ public final class RobotHardware {
 		turretTumbler.init();
 
 
-		turretMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
+		turret.init();
 		outtake1.init();
 		outtake2.init();
 		intake.init();
 		transfer.init();
-
 		limelight.start();
 		limelight.setPollRateHz(50);
 		limelight.pipelineSwitch(0); 
