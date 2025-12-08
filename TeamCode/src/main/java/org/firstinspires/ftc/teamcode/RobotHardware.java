@@ -16,7 +16,7 @@ import org.firstinspires.ftc.teamcode.systems.TransferSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
 public final class RobotHardware {
-	public final MecanumDrive drivetrain;
+	public final PinpointDrive drivetrain;
 	public TumblerSystem intakeStopper, turretTumbler;
 	public DistanceSystem distanceSystem;
 	public IntakeSystem intake, outtake1, outtake2, turret;
@@ -24,7 +24,7 @@ public final class RobotHardware {
 	public Limelight3A limelight;
 
 	public RobotHardware(HardwareMap hardwareMap) {
-		drivetrain = new MecanumDrive(hardwareMap, new Pose2d(0, 0, 0));
+		drivetrain = new PinpointDrive(hardwareMap, new Pose2d(0, 0, 0));
 
 		intake = new IntakeSystem(hardwareMap.get(DcMotorEx.class, "intake"));
 		outtake1 = new IntakeSystem(hardwareMap.get(DcMotorEx.class, "outtake1"));
@@ -34,7 +34,7 @@ public final class RobotHardware {
 
 
 		intakeStopper = new TumblerSystem(hardwareMap.get(Servo.class, "intakeStopper"), 0.61f, 0.5f, 0.15f, 0.3f, 0.38f);
-		turretTumbler = new TumblerSystem(hardwareMap.get(Servo.class, "turretTumbler"), 0.50f, 0.85f, 0.25f, 0.4f, 0.68f);
+		turretTumbler = new TumblerSystem(hardwareMap.get(Servo.class, "turretTumbler"), 0.65f, 0.32f, 0.25f, 1.0f, 0.32f);
 
 		limelight = hardwareMap.get(Limelight3A.class, "limelight");
 

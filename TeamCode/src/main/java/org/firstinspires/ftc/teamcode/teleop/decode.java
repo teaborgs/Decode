@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.teleop;
 import android.util.JsonReader;
 import android.util.JsonToken;
 
+import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -49,6 +50,7 @@ public final class decode extends BaseOpMode {
 			public static final InputSystem.Key GRAB_RESET_KEY = new InputSystem.Key("y");
 
 			public static final InputSystem.Key AUTO_SHOOTER_ENABLE_KEY = new InputSystem.Key("start");
+			public static final InputSystem.Key AUTO_SHOOTER_DISABLE_KEY = new InputSystem.Key("back");
 		}
 	}
 
@@ -73,8 +75,14 @@ public final class decode extends BaseOpMode {
 
 	@Override
 	protected void OnRun() {
+
+		if (robot != null) {
+			robot.drivetrain.updatePoseEstimate();
+		}
+
 		// === TOGGLE autoShooterAngle with START ===
 		boolean autoShooterKey = driveInput.isPressed(Keybindings.Drive.AUTO_SHOOTER_ENABLE_KEY);
+
 		if (autoShooterKey && !prevAutoShooterKeyPressed) {
 			autoShooterAngle = !autoShooterAngle;  // toggle
 		}
@@ -82,11 +90,19 @@ public final class decode extends BaseOpMode {
 
 		// === TOGGLE auto_aim with DPAD_UP ===
 		boolean llAimPressed = driveInput.isPressed(Keybindings.Drive.LL_AIM);
+
 		if (llAimPressed && !prevLlAimPressed) {
 			auto_aim = !auto_aim;  // toggle
 			turretAligned = false; // when switching modes, reset lock state
 		}
 		prevLlAimPressed = llAimPressed;
+
+		boolean autoAngleKey = driveInput.isPressed(Keybindings.Drive.AUTO_SHOOTER_DISABLE_KEY);
+
+		if(autoAngleKey && !prevAutoAngleKeyPressed){
+			autoShooterAngle = !autoShooterAngle;
+		}
+		prevAutoAngleKeyPressed = autoAngleKey;
 
 		Drive();
 		Shooter();
@@ -119,6 +135,7 @@ public final class decode extends BaseOpMode {
 	private boolean turretAligned = false; // are we currently "locked on"?
 	private boolean prevLlAimPressed = false;
 	private boolean prevAutoShooterKeyPressed = false;
+	private boolean prevAutoAngleKeyPressed = false;
 
 
 
@@ -169,15 +186,15 @@ public final class decode extends BaseOpMode {
 	// === helper: mapare distanță -> poziție servo în CM ===
 	private double shooterAngleFromDistanceCm(double distanceCm) {
 		double dNear = -1.0;
-		double posNear=0.65;
+		double posNear=0.5;
 
 
 		double dFar = 15.0;
 		double posFar = 0.80;
 
 		if (distanceCm <= 15.0 && distanceCm>=8.0) return shooterPosition = posNear;
-		else if(distanceCm<=8.0 && distanceCm>=0.0) return shooterPosition=0.3;
-		else if(distanceCm<=0.0 && distanceCm>=-1) return shooterPosition=0.2;
+		else if(distanceCm<=8.0 && distanceCm>=2.0) return shooterPosition=0.35;
+		else if(distanceCm<=2.0 && distanceCm>=-1) return shooterPosition=0.2;
 		else if (distanceCm >= dFar) return shooterPosition=posFar;
 		else return shooterPosition=0.0;
 
@@ -217,7 +234,7 @@ public final class decode extends BaseOpMode {
 					if (shooterPosition < 0.0) shooterPosition = 0.0;
 					if (shooterPosition > 1.0) shooterPosition = 1.0;
 
-					robot.turretTumbler.setPosition(shooterPosition);
+						robot.turretTumbler.setPosition(shooterPosition);
 				}
 
 				// DEBUG: vezi exact ce se întâmplă
@@ -316,6 +333,13 @@ public final class decode extends BaseOpMode {
 	protected void OnTelemetry(Telemetry telemetry)
 	{
 		super.OnTelemetry(telemetry);
+
+		if (robot != null && robot.drivetrain != null) {
+			Pose2d p = robot.drivetrain.pose;
+			telemetry.addData("ODO X (in)", p.position.x);
+			telemetry.addData("ODO Y (in)", p.position.y);
+			telemetry.addData("ODO H (deg)", Math.toDegrees(p.heading.log()));
+		}
 
 		if (robot == null || robot.limelight == null) {
 			telemetry.addLine("Robot sau Limelight NULL");

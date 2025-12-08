@@ -18,7 +18,7 @@ public class TumblerSystem extends AbstractSystem
 
 	public TumblerSystem(Servo tumbler)
 	{
-		this(tumbler, 0, 0, 0, 0, 0);
+		this(tumbler, 0, 0, 0, 1, 0);
 	}
 
 	public TumblerSystem(Servo tumbler, float transfer, float idle, float hold, float hover, float pickup)

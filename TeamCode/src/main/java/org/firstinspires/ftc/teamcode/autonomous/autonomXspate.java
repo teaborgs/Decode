@@ -13,14 +13,15 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem.IntakeDirection;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@Autonomous(name="Shoot + Mers Inainte 2 Sec (LL)", group="Test")
-public class autonomX extends LinearOpMode {
+@Autonomous(name="Shoot + Mers Inainte 2 Sec (spate)", group="Test")
+public class autonomXspate extends LinearOpMode
+{
 
 
 	DcMotor rightFront, leftFront, rightBack, leftBack;
 
-	// Sisteme pentru shoot / intake
-	DcMotor outtake1, intake , outtake2 , turret;
+
+	DcMotor outtake1, intake, outtake2, turret;
 	Servo intakeStopper;
 	CRServo transfer;
 
@@ -29,7 +30,8 @@ public class autonomX extends LinearOpMode {
 	Limelight3A limelight;
 
 	@Override
-	public void runOpMode() throws InterruptedException {
+	public void runOpMode() throws InterruptedException
+	{
 
 		// === INIT RobotHardware (CA ÎN TELEOP) ===
 		robot = new RobotHardware(hardwareMap);
@@ -40,15 +42,15 @@ public class autonomX extends LinearOpMode {
 
 
 		rightFront = hardwareMap.get(DcMotor.class, "rightFront");
-		leftFront  = hardwareMap.get(DcMotor.class, "leftFront");
-		rightBack  = hardwareMap.get(DcMotor.class, "rightBack");
-		leftBack   = hardwareMap.get(DcMotor.class, "leftBack");
+		leftFront = hardwareMap.get(DcMotor.class, "leftFront");
+		rightBack = hardwareMap.get(DcMotor.class, "rightBack");
+		leftBack = hardwareMap.get(DcMotor.class, "leftBack");
 
 		outtake1 = hardwareMap.get(DcMotor.class, "outtake1");
 		outtake2 = hardwareMap.get(DcMotor.class, "outtake2");
 		transfer = hardwareMap.get(CRServo.class, "transfer");
-		intake   = hardwareMap.get(DcMotor.class, "intake");
-		turret   = hardwareMap.get(DcMotor.class, "turret");
+		intake = hardwareMap.get(DcMotor.class, "intake");
+		turret = hardwareMap.get(DcMotor.class, "turret");
 		intakeStopper = hardwareMap.get(Servo.class, "intakeStopper");
 
 
@@ -69,29 +71,29 @@ public class autonomX extends LinearOpMode {
 		telemetry.update();
 		waitForStart();
 
-		if (opModeIsActive()) {
+		if (opModeIsActive())
+		{
 
-			// 1) Auto-aim cu Limelight pe turret
-			autoAimTurretLimelight(0.4, 2500); // maxPower=0.4, timeout=2.5s
+			mersinainteShoot(0.3, 2500);
 
-			mergeInainteFaraEncodere2(0.2,1000);
+			autoAimTurretLimelight(0.4, 2500);
 
-			// 2) Secvența de tras (3 px)
 			shootSecventa(3000);
 
-			// 3) Mers înainte
-			mergeInainteFaraEncodere(0.3, 2000);
+			IntoarceDreapta(0.5, -0.5, 2100);
 
-			// 4) Poți lăsa tumblerul într-o poziție safe
-			robot.turretTumbler.setDestination(TumblerSystem.TumblerDestination.BUSY);
+			//mersinainte(0.3, 2000);
+
+
+			robot.turretTumbler.setDestination(TumblerSystem.TumblerDestination.HOVER);
 		}
 	}
 
-	// =======================
-	//   AUTO AIM TURRET LL
-	// =======================
-	public void autoAimTurretLimelight(double maxPower, long timeoutMs) {
-		if (limelight == null) {
+
+	public void autoAimTurretLimelight(double maxPower, long timeoutMs)
+	{
+		if (limelight == null)
+		{
 			telemetry.addLine("Limelight NU e mapat!");
 			telemetry.update();
 			return;
@@ -108,18 +110,21 @@ public class autonomX extends LinearOpMode {
 
 		while (opModeIsActive()
 				&& (System.currentTimeMillis() - startTime) < timeoutMs
-				&& !isStopRequested()) {
+				&& !isStopRequested())
+		{
 
 			LLResult result = limelight.getLatestResult();
 
-			if (result == null) {
+			if (result == null)
+			{
 				turret.setPower(0);
 				telemetry.addLine("LL: result == null");
 				telemetry.update();
 				continue;
 			}
 
-			if (!result.isValid()) {
+			if (!result.isValid())
+			{
 				turret.setPower(0);
 				telemetry.addLine("LL: no valid target");
 				telemetry.update();
@@ -133,7 +138,8 @@ public class autonomX extends LinearOpMode {
 			telemetry.addData("LL absTx", absTx);
 
 			// LOCK: dacă suntem suficient de aproape de centru
-			if (absTx < lockThreshold) {
+			if (absTx < lockThreshold)
+			{
 				turret.setPower(0);
 				telemetry.addLine("Turret ALIGNED");
 				telemetry.update();
@@ -144,10 +150,10 @@ public class autonomX extends LinearOpMode {
 
 
 			if (power > 0) power = Math.max(power, minPower);
-			else           power = Math.min(power, -minPower);
+			else power = Math.min(power, -minPower);
 
 			// clamp la maxPower
-			if (power >  maxPower) power =  maxPower;
+			if (power > maxPower) power = maxPower;
 			if (power < -maxPower) power = -maxPower;
 
 			turret.setPower(power);
@@ -160,48 +166,8 @@ public class autonomX extends LinearOpMode {
 	}
 
 
-	public void shootSecventa(long milisecunde) throws InterruptedException {
-
-		intake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-		intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-		intake.setDirection(DcMotor.Direction.FORWARD);
-
-		// ridici stopperul
-		intakeStopper.setPosition(0.6);
-
-		// pornesti outtake-urile
-		outtake1.setPower(0.95);
-		outtake2.setPower(0.95);
-
-
-		sleep(1600);
-
-		for (int i = 0; i < 3; i++) {
-
-
-			transfer.setPower(-0.6);
-			sleep(500);
-
-
-			intake.setPower(-0.9);
-			sleep(300);
-			intake.setPower(0);
-
-
-			transfer.setPower(0);
-			sleep(450);
-		}
-
-		// opresti tot
-		transfer.setPower(0.0);
-		outtake1.setPower(0.0);
-		outtake2.setPower(0.0);
-		intake.setPower(0.0);
-	}
-
-
-
-	public void mergeInainteFaraEncodere(double viteza, long milisecunde) {
+	public void mersinainteShoot(double viteza, long milisecunde)
+	{
 		rightFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 		rightBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 		leftBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -218,27 +184,89 @@ public class autonomX extends LinearOpMode {
 		rightBack.setPower(0);
 		leftBack.setPower(0);
 		leftFront.setPower(0);
+
 	}
 
-public void mergeInainteFaraEncodere2(double viteza, long milisecunde) {
-	rightFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-	rightBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-	leftBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-	leftFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+	public void IntoarceDreapta(double viteza1, double viteza2, long milisecunde)
+	{
+		leftFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+		leftBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+		rightFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+		rightBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-	rightFront.setPower(viteza);
-	rightBack.setPower(viteza);
-	leftBack.setPower(viteza);
-	leftFront.setPower(viteza);
+		// Stânga înainte, dreapta înapoi (față de robot)
+		leftFront.setPower(viteza1);
+		leftBack.setPower(viteza2);
 
-	sleep(milisecunde);
+		rightFront.setPower(-viteza1);
+		rightBack.setPower(-viteza2);
 
-	rightFront.setPower(0);
-	rightBack.setPower(0);
-	leftBack.setPower(0);
-	leftFront.setPower(0);
+		sleep(milisecunde);
+
+		leftFront.setPower(0);
+		leftBack.setPower(0);
+		rightFront.setPower(0);
+		rightBack.setPower(0);
+	}
+
+
+	public void shootSecventa(long milisecunde) throws InterruptedException
+	{
+
+		intake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+		intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+		intake.setDirection(DcMotor.Direction.FORWARD);
+
+		// ridici stopperul
+		intakeStopper.setPosition(0.6);
+
+		// pornesti outtake-urile
+		outtake1.setPower(0.8);
+		outtake2.setPower(0.8);
+
+
+		sleep(1600);
+
+		for (int i = 0; i < 3; i++)
+		{
+
+
+			transfer.setPower(-0.6);
+			sleep(500);
+
+
+			intake.setPower(-0.9);
+			sleep(300);
+
+			//transfer.setPower(0);
+			//sleep(450);
+		}
+
+		// opresti tot
+		transfer.setPower(0.0);
+		outtake1.setPower(0.0);
+		outtake2.setPower(0.0);
+		intake.setPower(0.0);
+	}
+
+	public void mersinainte(double viteza, long milisecunde)
+	{
+		rightFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+		rightBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+		leftBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+		leftFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+		rightFront.setPower(viteza);
+		rightBack.setPower(viteza);
+		leftBack.setPower(viteza);
+		leftFront.setPower(viteza);
+
+		sleep(milisecunde);
+
+		rightFront.setPower(0);
+		rightBack.setPower(0);
+		leftBack.setPower(0);
+		leftFront.setPower(0);
+
+	}
 }
-}
-
-
-

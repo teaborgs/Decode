@@ -108,7 +108,7 @@ public class PinpointDrive extends MecanumDrive {
         pinpoint.resetPosAndIMU();
         // wait for pinpoint to finish calibrating
         try {
-            Thread.sleep(300);
+            Thread.sleep(250);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
