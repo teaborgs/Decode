@@ -43,7 +43,7 @@ public class Auto_Stanga_6 extends BaseOpMode {
 
 		robot.drivetrain.updatePoseEstimate();
 
-		// === PATH ACTIONS ===
+		/// === PATH ACTIONS ===
 
 		// START -> SHOOT_BACK
 		Action goToShootBack = robot.drivetrain.actionBuilder(waypoints.START)
@@ -61,52 +61,63 @@ public class Auto_Stanga_6 extends BaseOpMode {
 				)
 				.build();
 
-		// PICKUP1 -> SHOOT_BACK second time
-		Action goToShootBack2 = robot.drivetrain.actionBuilder(waypoints.FPICKUP1)
-				.splineTo(
-						new Vector2d(waypoints.SHOOT_BACK.position.x, waypoints.SHOOT_BACK.position.y),
-						waypoints.SHOOT_BACK.heading.toDouble()
-				)
-				.build();
+
 
 		// Pickup movement
 		Action intakeLine = robot.drivetrain.actionBuilder(waypoints.PICKUP1)
 				.lineToY(waypoints.FPICKUP1.position.y)
 				.build();
 
+		// returning to shooting pos (first move)
+		Action BackIntakeLine = robot.drivetrain.actionBuilder(waypoints.FPICKUP1)
+				.lineToY(waypoints.PICKUP1.position.y)
+				.build();
 
-		// === SIMPLE SHOOTER / GATE ACTIONS ===
+		//  returning to shooting pos (second move)
+		Action goToShootBack2 = robot.drivetrain.actionBuilder(waypoints.PICKUP1)
+				.splineTo(
+						new Vector2d(waypoints.SHOOT_BACK.position.x, waypoints.SHOOT_BACK.position.y),
+						waypoints.SHOOT_BACK.heading.toDouble()
+				)
+				.build();
 
-		// spin shooter wheels + run transfer + intake (but gate CLOSED)
-		Action startShootingSystem = packet -> {
+		//ending location
+		Action finishLine = robot.drivetrain.actionBuilder((waypoints.SHOOT_BACK)) // :)
+				.splineTo(
+						new Vector2d(waypoints.FINISH.position.x, waypoints.FINISH.position.y),
+						waypoints.FINISH.heading.toDouble()
+				)
+				.build();
+
+		/// === SHOOTER AND INTAKE ACTIONS ===
+
+		// start shooter and open stopper
+		Action shooter_on = packet-> {
 			robot.outtake1.setIntakeDirection(IntakeSystem.IntakeDirection.FORWARD);
 			robot.outtake2.setIntakeDirection(IntakeSystem.IntakeDirection.FORWARD);
-			robot.transfer.setPower(1.0);
-			robot.intake.setIntakeDirection(IntakeSystem.IntakeDirection.FORWARD);
-
-			robot.intakeStopper.setDestination(TumblerSystem.TumblerDestination.IDLE); // gate CLOSED
-			return false;
-		};
-
-		// just open the gate to fire
-		Action openGate = packet -> {
 			robot.intakeStopper.setDestination(TumblerSystem.TumblerDestination.TRANSFER);
 			return false;
 		};
 
-		// close gate but keep wheels running
-		Action closeGate = packet -> {
+		//start shooter and close stopper
+		Action shooter_off = packet-> {
+			robot.outtake1.setIntakeDirection(IntakeSystem.IntakeDirection.STOP);
+			robot.outtake2.setIntakeDirection(IntakeSystem.IntakeDirection.STOP);
 			robot.intakeStopper.setDestination(TumblerSystem.TumblerDestination.IDLE);
 			return false;
 		};
 
-		// stop shooter, intake, transfer
-		Action stopShootingSystem = packet -> {
-			robot.outtake1.setIntakeDirection(IntakeSystem.IntakeDirection.STOP);
-			robot.outtake2.setIntakeDirection(IntakeSystem.IntakeDirection.STOP);
+		// feed artifacts to shooter
+		Action shootArtifact = packet-> {
+			robot.intake.setIntakeDirection(IntakeSystem.IntakeDirection.FORWARD);
+			robot.transfer.setPower(1);
+			return false;
+		};
+
+		// stop feeding artifacts to shooter
+		Action stopShooting = packet -> {
 			robot.intake.setIntakeDirection(IntakeSystem.IntakeDirection.STOP);
 			robot.transfer.setPower(0);
-			robot.intakeStopper.setDestination(TumblerSystem.TumblerDestination.IDLE);
 			return false;
 		};
 
@@ -142,43 +153,51 @@ public class Auto_Stanga_6 extends BaseOpMode {
 		Actions.runBlocking(
 				RunSequentially(
 
-						// 1. Drive to shooting spot
+						// Drive to shooting spot
 						goToShootBack,
 						WaitFor(0.2),
 
-						// 2. Aim turret + tilt shooter (ONE TIME)
+						/// START OF FIRST SCORE SEQUENCE
+
+
+						// Aim turret + tilt shooter (ONE TIME)
 						moveTurretToAutonAngle,
 						setAutonShooterAngle,
 						WaitFor(0.3),
 
-						// 3. Spin shooter wheels + intake + transfer ON (gate closed)
-						startShootingSystem,
+						// Spin shooter wheels + intakeStopper open
+						shooter_on,
 						WaitFor(1.0),  // let everything get to full power
 
 						// -------------- VOLLEY: 3 OPEN/CLOSE WINDOWS --------------
 
-						// === BALL WINDOW 1 ===
-						openGate,
-						WaitFor(1.2),   // how long gate is open -> how many pixels leave
-						closeGate,
-						WaitFor(1.0),   // cooldown (wheels recover, next pixel settles)
+						// BALL 1
+						shootArtifact,
+						WaitFor(1.0),   // how long gate is open -> how many artifacts leave
+						stopShooting,
+						WaitFor(1.0),   // cooldown (wheels recover)
 
-						// === BALL WINDOW 2 ===
-						openGate,
-						WaitFor(1.2),
-						closeGate,
+						// BALL 2
+						shootArtifact,
+						WaitFor(1.0),
+						stopShooting,
+						moveTurretToAutonAngle,  //set turret and angle positions again in case of errors
+						setAutonShooterAngle,
 						WaitFor(1.0),
 
-						// === BALL WINDOW 3 ===
-						openGate,
+						// BALL 3
+						shootArtifact,
 						WaitFor(1.2),
-						closeGate,
+						stopShooting,
 						WaitFor(0.40),
 
 						// stop shooter system
-						stopShootingSystem,
+						stopShooting,
+						shooter_off,
 
-						// 4. Go pick up new artifacts
+						/// END OF FIRST SCORE SEQUENCE
+
+						// Go pick up new artifacts
 						goToPickup,
 						WaitFor(0.2),
 
@@ -191,11 +210,58 @@ public class Auto_Stanga_6 extends BaseOpMode {
 						stopIntake,
 						WaitFor(0.6),
 
-						// 5. Return to shoot again (you can add a second volley later)
-						goToShootBack2
+						// return to shooting pos
+
+						BackIntakeLine,
+						WaitFor(0.1),
+						goToShootBack2,
+						WaitFor(0.3),
+
+						///  START OF SECOND SCORE SEQUENCE
+
+						// Aim turret + tilt shooter (ONE TIME)
+						moveTurretToAutonAngle,
+						setAutonShooterAngle,
+						WaitFor(0.3),
+
+						// Spin shooter wheels + intakeStopper open
+						shooter_on,
+						WaitFor(1.0),
+
+
+						// BALL 1
+						shootArtifact,
+						WaitFor(1.0),
+						stopShooting,
+						WaitFor(1.0),
+
+						// BALL 2
+						shootArtifact,
+						WaitFor(1.0),
+						stopShooting,
+						moveTurretToAutonAngle,
+						setAutonShooterAngle,
+						WaitFor(1.0),
+
+						// BALL 3
+						shootArtifact,
+						WaitFor(1.2),
+						stopShooting,
+						WaitFor(0.40),
+
+						// stop shooter system
+						stopShooting,
+						shooter_off,
+
+						///  END OF SECOND SCORE SEQUENCE
+
+						//leave triangle
+						finishLine
+
+
+
+
 				)
 		);
 	}
-
-
 }
