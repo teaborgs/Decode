@@ -63,7 +63,11 @@ public class IntakeSystem extends AbstractSystem
 	public Action setDirectionAction(IntakeDirection direction) {
 		return new InstantAction(() -> setIntakeDirection(direction));
 	}
+	public DcMotorEx getMotor() {
+		return intakeMotor;
+	}
 }
+
 
 
 

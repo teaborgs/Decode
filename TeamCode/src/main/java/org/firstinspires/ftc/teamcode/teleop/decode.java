@@ -395,5 +395,6 @@ public final class decode extends BaseOpMode {
 		telemetry.addData("Last LL Distance", lastdistanceCm);
 		telemetry.addData("Turret Mode", auto_aim ? "AUTO" : "MANUAL");
 		telemetry.addData("Shooter Pos", shooterPosition);
+		telemetry.addData("Turret pos", robot.turret.getMotor().getCurrentPosition());
 	}
 }
