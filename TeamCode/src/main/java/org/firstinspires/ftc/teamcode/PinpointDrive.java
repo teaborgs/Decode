@@ -42,8 +42,8 @@ public class PinpointDrive extends MecanumDrive {
          */
         //These are tuned for 3110-0002-0001 Product Insight #1
         // RR localizer note: These units are inches, presets are converted from mm (which is why they are inexact)
-        public double xOffset = -3.3071;
-        public double yOffset = -6.6142;
+        public double xOffset = 80;
+        public double yOffset = -100;
 
         /*
         Set the kind of pods used by your robot. If you're using goBILDA odometry pods, select either
@@ -63,7 +63,7 @@ public class PinpointDrive extends MecanumDrive {
         you move the robot to the left.
          */
         public GoBildaPinpointDriver.EncoderDirection xDirection = GoBildaPinpointDriver.EncoderDirection.FORWARD;
-        public GoBildaPinpointDriver.EncoderDirection yDirection = GoBildaPinpointDriver.EncoderDirection.FORWARD;
+        public GoBildaPinpointDriver.EncoderDirection yDirection = GoBildaPinpointDriver.EncoderDirection.REVERSED;
 
         /*
         Use the pinpoint IMU for tuning
@@ -72,7 +72,7 @@ public class PinpointDrive extends MecanumDrive {
          replace "imu" with "pinpoint" or whatever your pinpoint is called in config.
          Note: Pinpoint IMU is always used for base localization
          */
-        public boolean usePinpointIMUForTuning = true;
+        public boolean usePinpointIMUForTuning = false;
     }
 
     public static Params PARAMS = new Params();
@@ -89,7 +89,8 @@ public class PinpointDrive extends MecanumDrive {
         }
 
         // RR localizer note: don't love this conversion (change driver?)
-        pinpoint.setOffsets(DistanceUnit.MM.fromInches(PARAMS.xOffset), DistanceUnit.MM.fromInches(PARAMS.yOffset));
+        pinpoint.setOffsets(PARAMS.xOffset, PARAMS.yOffset);
+
 
 
         pinpoint.setEncoderResolution(PARAMS.encoderResolution);
@@ -118,46 +119,28 @@ public class PinpointDrive extends MecanumDrive {
     @Override
     public PoseVelocity2d updatePoseEstimate() {
         if (lastPinpointPose != pose) {
-            // RR localizer note:
-            // Something else is modifying our pose (likely for relocalization),
-            // so we override the sensor's pose with the new pose.
-            // This could potentially cause up to 1 loop worth of drift.
-            // I don't like this solution at all, but it preserves compatibility.
-            // The only alternative is to add getter and setters, but that breaks compat.
-            // Potential alternate solution: timestamp the pose set and backtrack it based on speed?
+            // If pose was externally reset (e.g., relocalization), push that into Pinpoint
             pinpoint.setPosition(pose);
         }
+
+        // Update Pinpoint (uses its own IMU + encoders internally)
         pinpoint.update();
+
+        // Use Pinpoint's full pose: X, Y, *and* heading
         pose = pinpoint.getPositionRR();
         lastPinpointPose = pose;
 
-        // RR standard
+        // Standard RR pose history & logging
         poseHistory.add(pose);
         while (poseHistory.size() > 100) {
             poseHistory.removeFirst();
         }
 
         FlightRecorder.write("ESTIMATED_POSE", new PoseMessage(pose));
-        FlightRecorder.write("PINPOINT_RAW_POSE",new FTCPoseMessage(pinpoint.getPosition()));
-        FlightRecorder.write("PINPOINT_STATUS",pinpoint.getDeviceStatus());
+        FlightRecorder.write("PINPOINT_STATUS", pinpoint.getDeviceStatus());
 
+        // And its velocity
         return pinpoint.getVelocityRR();
-    }
-
-
-    // for debug logging
-    public static final class FTCPoseMessage {
-        public long timestamp;
-        public double x;
-        public double y;
-        public double heading;
-
-        public FTCPoseMessage(Pose2D pose) {
-            this.timestamp = System.nanoTime();
-            this.x = pose.getX(DistanceUnit.INCH);
-            this.y = pose.getY(DistanceUnit.INCH);
-            this.heading = pose.getHeading(AngleUnit.RADIANS);
-        }
     }
 
 

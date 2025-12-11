@@ -13,7 +13,7 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem.IntakeDirection;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@Autonomous(name="Shoot + Mers Inainte 2 Sec (LL)", group="Test")
+@Autonomous(name="Shoot + Mers Inainte 2 Sec (LL)", group="Auto")
 public class autonomX extends LinearOpMode {
 
 

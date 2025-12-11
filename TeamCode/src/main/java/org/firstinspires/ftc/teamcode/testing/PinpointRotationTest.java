@@ -8,43 +8,48 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.teamcode.PinpointDrive;
 
-@Autonomous(name = "Pinpoint Rotation Test", group = "Tuning")
+@Autonomous(name = "Pinpoint Rotation Test (Controlled)", group = "Tuning")
 public class PinpointRotationTest extends LinearOpMode {
 	@Override
 	public void runOpMode() throws InterruptedException {
 		Pose2d startPose = new Pose2d(0, 0, 0);
 		PinpointDrive drive = new PinpointDrive(hardwareMap, startPose);
 
-		// HARD RESET: zero Pinpoint + RR pose
+		// HARD RESET: zero Pinpoint pose
 		if (drive.pinpoint != null) {
 			drive.pinpoint.resetPosAndIMU();
-			// tiny delay to let it calibrate
-			Thread.sleep(300);
+			sleep(300);
 			drive.pinpoint.setPosition(startPose);
 		}
+
+		// IMPORTANT: zero the HUB IMU yaw too, since we use it for heading
+		drive.lazyImu.get().resetYaw();
+
 		drive.pose = startPose;
 
-		telemetry.addLine("Ready. Robot will spin in place.");
+		telemetry.addLine("Ready. Robot will spin slowly in place.");
 		telemetry.update();
 
 		waitForStart();
 		if (isStopRequested()) return;
 
-		double testDurationSec = 30.0;      // 30s is enough for now
-		double omega = Math.PI / 4.0;       // ~45°/s
+		double testDurationSec = 4.0;   // how long to spin
+		double rotationPower   = 0.2;   // spin power
+
 		long startTime = System.nanoTime();
 
 		while (opModeIsActive()) {
 			double elapsedSec = (System.nanoTime() - startTime) / 1e9;
 			if (elapsedSec > testDurationSec) break;
 
-			// spin in place
-			drive.setDrivePowers(
-					new PoseVelocity2d(new Vector2d(0, 0), omega)
-			);
+			// Spin in place at low power
+			drive.leftFront.setPower( rotationPower);
+			drive.leftBack.setPower(  rotationPower);
+			drive.rightFront.setPower(-rotationPower);
+			drive.rightBack.setPower(-rotationPower);
 
-			// UPDATE ODOMETRY
-			drive.updatePoseEstimate();
+			// UPDATE ODOMETRY FROM PINPOINT + IMU
+			PoseVelocity2d vel = drive.updatePoseEstimate();
 			Pose2d p = drive.pose;
 
 			double x = p.position.x;
@@ -55,11 +60,16 @@ public class PinpointRotationTest extends LinearOpMode {
 			telemetry.addData("ODO X (in)", "%.3f", x);
 			telemetry.addData("ODO Y (in)", "%.3f", y);
 			telemetry.addData("ODO H (deg)", "%.1f", hDeg);
+			telemetry.addData("Rot Power", rotationPower);
 			telemetry.update();
 		}
 
 		// stop
-		drive.setDrivePowers(new PoseVelocity2d(new Vector2d(0, 0), 0));
+		drive.leftFront.setPower(0);
+		drive.leftBack.setPower(0);
+		drive.rightFront.setPower(0);
+		drive.rightBack.setPower(0);
+
 		drive.updatePoseEstimate();
 		Pose2d endPose = drive.pose;
 

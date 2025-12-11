@@ -13,8 +13,8 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem.IntakeDirection;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@Autonomous(name="Shoot + Mers Inainte 2 Sec (spate)", group="Auto")
-public class autonomXspate extends LinearOpMode
+@Autonomous(name="Shoot + Mers Inainte 2 Sec (spate rosu)", group="Auto")
+public class autonomXspateRosu extends LinearOpMode
 {
 
 
@@ -80,7 +80,7 @@ public class autonomXspate extends LinearOpMode
 
 			shootSecventa(3000);
 
-			IntoarceDreapta(0.3, -0.3, 1500);
+			IntoarceStanga(0.3, -0.3, 1500);
 
 			//mersinainte(0.3, 2000);
 
@@ -187,19 +187,19 @@ public class autonomXspate extends LinearOpMode
 
 	}
 
-	public void IntoarceDreapta(double viteza1, double viteza2, long milisecunde)
+	public void IntoarceStanga(double viteza1, double viteza2, long milisecunde)
 	{
 		leftFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 		leftBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 		rightFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 		rightBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-		// Stânga înainte, dreapta înapoi (față de robot)
-		leftFront.setPower(viteza1);
-		leftBack.setPower(viteza2);
+		// Stânga înapoi, dreapta înainte (față de robot)
+		leftFront.setPower(-viteza1);
+		leftBack.setPower(-viteza2);
 
-		rightFront.setPower(-viteza1);
-		rightBack.setPower(-viteza2);
+		rightFront.setPower(viteza1);
+		rightBack.setPower(viteza2);
 
 		sleep(milisecunde);
 

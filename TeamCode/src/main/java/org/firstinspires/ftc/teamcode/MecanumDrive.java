@@ -30,8 +30,6 @@ import com.acmerobotics.roadrunner.ftc.LynxFirmware;
 import com.acmerobotics.roadrunner.ftc.OverflowEncoder;
 import com.acmerobotics.roadrunner.ftc.PositionVelocityPair;
 import com.acmerobotics.roadrunner.ftc.RawEncoder;
-import com.acmerobotics.roadrunner.ftc.GoBildaPinpointDriverRR;
-import com.acmerobotics.roadrunner.ftc.GoBildaPinpointDriver;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -40,7 +38,6 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
-import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
@@ -69,27 +66,28 @@ public class MecanumDrive {
         public double trackWidthTicks = 12.698491025795713;
 
         // feedforward parameters (in tick units)
-        public double kS = 1.747185469411772;
-        public double kV = 0.1458242975902566;
+        public double kS = 1.4775575219897403;
+        public double kV = 0.11913415633951076;
         public double kA = 0.004;
+        //kV: 0.11913415633951076, kS: 1.4775575219897403
 
         // path profile parameters (in inches)
-        public double maxWheelVel = 60;
-        public double minProfileAccel = -30;
-        public double maxProfileAccel = 50;
+        public double maxWheelVel = 30;
+        public double minProfileAccel = -25;
+        public double maxProfileAccel = 25;
 
         // turn profile parameters (in radians)
-        public double maxAngVel = Math.PI;
-        public double maxAngAccel = Math.PI;
+        public double maxAngVel = Math.PI / 3;
+        public double maxAngAccel = Math.PI / 3;
 
         // path controller gains
-        public double axialGain = 2.7;
-        public double lateralGain = 4.7;
-        public double headingGain = 4;
+        public double axialGain = 2.0;
+        public double lateralGain = 1.2; // 1.6o
+        public double headingGain = 2.0;
 
-        public double axialVelGain = 0.01;
-        public double lateralVelGain = 0.25;
-        public double headingVelGain = 0.06;
+        public double axialVelGain = 0.0;
+        public double lateralVelGain = 0.0; // 0.02
+        public double headingVelGain = 0.1;
     }
 
     public static Params PARAMS = new Params();
@@ -122,9 +120,6 @@ public class MecanumDrive {
     private final DownsampledWriter targetPoseWriter = new DownsampledWriter("TARGET_POSE", 50_000_000);
     private final DownsampledWriter driveCommandWriter = new DownsampledWriter("DRIVE_COMMAND", 50_000_000);
     private final DownsampledWriter mecanumCommandWriter = new DownsampledWriter("MECANUM_COMMAND", 50_000_000);
-
-    // NEW: goBILDA Pinpoint / OTOS driver wrapper from Road Runner
-    private final GoBildaPinpointDriverRR odo;
 
     public class DriveLocalizer implements Localizer {
         public final Encoder leftFront, leftBack, rightBack, rightFront;
@@ -231,30 +226,13 @@ public class MecanumDrive {
         leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
         leftBack.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        // IMU (still available if you want it, but not used for localization anymore)
+        // IMU
         lazyImu = new LazyImu(hardwareMap, "imu", new RevHubOrientationOnRobot(
                 PARAMS.logoFacingDirection, PARAMS.usbFacingDirection));
 
         voltageSensor = hardwareMap.voltageSensor.iterator().next();
 
-        // ---------- NEW: goBILDA Pinpoint / OTOS setup ----------
-        odo = hardwareMap.get(GoBildaPinpointDriverRR.class, "pinpoint");
-
-        // Offsets in mm (tune these for your robot)
-        odo.setOffsets(-84.0, -168.0);
-
-        // Pod type (4-bar in your example)
-        odo.setEncoderResolution(
-                GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD
-        );
-
-        // Encoder directions (verify X increases forward, Y increases left)
-        odo.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD, GoBildaPinpointDriver.EncoderDirection.FORWARD);
-
-        // Reset pose + IMU inside the OTOS
-        odo.resetPosAndIMU();
-
-        // Keep this around in case you ever want to compare encoders-only localizer vs OTOS
+        // Encoder + IMU localizer
         localizer = new DriveLocalizer();
 
         FlightRecorder.write("MECANUM_PARAMS", PARAMS);
@@ -457,16 +435,10 @@ public class MecanumDrive {
         }
     }
 
-    // 🔑 The critical function now using OTOS pose & velocity
+    // STANDARD RR VERSION: uses the localizer (no Pinpoint here)
     public PoseVelocity2d updatePoseEstimate() {
-        // Ask OTOS for new data
-        odo.update();
-
-        // Road Runner wrapper gives Pose2d & PoseVelocity2d directly (inches, rad/s)
-        Pose2d rrPose = odo.getPositionRR();
-        PoseVelocity2d rrVel = odo.getVelocityRR();
-
-        pose = rrPose;
+        Twist2dDual<Time> twist = localizer.update();
+        pose = pose.plus(twist.value());
 
         poseHistory.add(pose);
         while (poseHistory.size() > 100) {
@@ -475,7 +447,7 @@ public class MecanumDrive {
 
         estimatedPoseWriter.write(new PoseMessage(pose));
 
-        return rrVel;
+        return twist.velocity().value();
     }
 
     private void drawPoseHistory(Canvas c) {
