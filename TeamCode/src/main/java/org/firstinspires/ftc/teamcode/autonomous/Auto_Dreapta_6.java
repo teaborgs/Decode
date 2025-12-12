@@ -13,12 +13,12 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import org.firstinspires.ftc.teamcode.BaseOpMode;
 import org.firstinspires.ftc.teamcode.RobotHardware;
-import org.firstinspires.ftc.teamcode.autonomous.waypoints.waypoints;
+import org.firstinspires.ftc.teamcode.autonomous.waypoints.waypointsRED;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@Autonomous(name = "Autonom_Stanga", group = "Auto")
-public class Auto_Stanga_6 extends BaseOpMode {
+@Autonomous(name = "Autonom_Dreapta", group = "Auto")
+public class Auto_Dreapta_6 extends BaseOpMode {
 	private RobotHardware robot;
 
 	// === TUNE THESE ===
@@ -65,7 +65,7 @@ public class Auto_Stanga_6 extends BaseOpMode {
 	}
 
 	private static class AimTurretWithLimelightAction implements Action {
-		private final Auto_Stanga_6 op;      // to access turretHoldCurrent()
+		private final Auto_Dreapta_6 op;      // to access turretHoldCurrent()
 		private final RobotHardware robot;
 
 		private final double kP;
@@ -80,7 +80,7 @@ public class Auto_Stanga_6 extends BaseOpMode {
 		private long startTimeMs = 0;
 
 		AimTurretWithLimelightAction(
-				Auto_Stanga_6 op,
+				Auto_Dreapta_6 op,
 				RobotHardware robot,
 				double kP,
 				double minPower,
@@ -90,7 +90,6 @@ public class Auto_Stanga_6 extends BaseOpMode {
 				double directionSign,
 				double holdPower
 		) {
-
 			this.op = op;
 			this.robot = robot;
 			this.kP = kP;
@@ -182,43 +181,43 @@ public class Auto_Stanga_6 extends BaseOpMode {
 		/// === PATH ACTIONS ===
 
 		// START -> SHOOT_BACK
-		Action goToShootBack = robot.drivetrain.actionBuilder(waypoints.START)
+		Action goToShootBack = robot.drivetrain.actionBuilder(waypointsRED.START)
 				.splineTo(
-						new Vector2d(waypoints.SHOOT_BACK.position.x, waypoints.SHOOT_BACK.position.y),
-						waypoints.SHOOT_BACK.heading.toDouble()
+						new Vector2d(waypointsRED.SHOOT_BACK.position.x, waypointsRED.SHOOT_BACK.position.y),
+						waypointsRED.SHOOT_BACK.heading.toDouble()
 				)
 				.build();
 
 		// SHOOT_BACK -> PICKUP1
-		Action goToPickup = robot.drivetrain.actionBuilder(waypoints.SHOOT_BACK)
+		Action goToPickup = robot.drivetrain.actionBuilder(waypointsRED.SHOOT_BACK)
 				.splineTo(
-						new Vector2d(waypoints.PICKUP1.position.x, waypoints.PICKUP1.position.y),
-						waypoints.PICKUP1.heading.toDouble()
+						new Vector2d(waypointsRED.PICKUP1.position.x, waypointsRED.PICKUP1.position.y),
+						waypointsRED.PICKUP1.heading.toDouble()
 				)
 				.build();
 
-		Action goBackPickup = robot.drivetrain.actionBuilder(waypoints.FPICKUP1)
-				.lineToY(waypoints.PICKUP1.position.y)
+		Action goBackPickup = robot.drivetrain.actionBuilder(waypointsRED.FPICKUP1)
+				.lineToY(waypointsRED.PICKUP1.position.y)
 				.build();
 
 		// Pickup movement
-		Action intakeLine = robot.drivetrain.actionBuilder(waypoints.PICKUP1)
-				.lineToY(waypoints.FPICKUP1.position.y)
+		Action intakeLine = robot.drivetrain.actionBuilder(waypointsRED.PICKUP1)
+				.lineToY(waypointsRED.FPICKUP1.position.y)
 				.build();
 
 		// FPICKUP1 -> SHOOT_BACK
-		Action goToShootBack2 = robot.drivetrain.actionBuilder(waypoints.FPICKUP1)
+		Action goToShootBack2 = robot.drivetrain.actionBuilder(waypointsRED.FPICKUP1)
 				.splineTo(
-						new Vector2d(waypoints.SHOOT_BACK.position.x, waypoints.SHOOT_BACK.position.y),
-						waypoints.SHOOT_BACK.heading.toDouble()
+						new Vector2d(waypointsRED.SHOOT_BACK.position.x, waypointsRED.SHOOT_BACK.position.y),
+						waypointsRED.SHOOT_BACK.heading.toDouble()
 				)
 				.build();
 
 		// ending location
-		Action finishLine = robot.drivetrain.actionBuilder((waypoints.SHOOT_BACK))
+		Action finishLine = robot.drivetrain.actionBuilder((waypointsRED.SHOOT_BACK))
 				.splineTo(
-						new Vector2d(waypoints.FINISH.position.x, waypoints.FINISH.position.y),
-						waypoints.FINISH.heading.toDouble()
+						new Vector2d(waypointsRED.FINISH.position.x, waypointsRED.FINISH.position.y),
+						waypointsRED.FINISH.heading.toDouble()
 				)
 				.build();
 

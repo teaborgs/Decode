@@ -78,9 +78,9 @@ public class autonomXspateRosu extends LinearOpMode
 
 			autoAimTurretLimelight(0.4, 2500);
 
-			shootSecventa(3000);
+			shootSecventa(8000);
 
-			IntoarceStanga(0.3, -0.3, 1500);
+			IntoarceStanga(0.3, -0.3, 2000);
 
 			//mersinainte(0.3, 2000);
 
@@ -232,11 +232,11 @@ public class autonomXspateRosu extends LinearOpMode
 
 
 			transfer.setPower(-0.6);
-			sleep(500);
+			sleep(800);
 
 
 			intake.setPower(-0.9);
-			sleep(300);
+			sleep(500);
 
 			//transfer.setPower(0);
 			//sleep(450);

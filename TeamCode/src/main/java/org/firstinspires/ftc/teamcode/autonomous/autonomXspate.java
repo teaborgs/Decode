@@ -80,7 +80,7 @@ public class autonomXspate extends LinearOpMode
 
 			shootSecventa(3000);
 
-			IntoarceDreapta(0.3, -0.3, 1500);
+			IntoarceDreapta(0.3, -0.3, 2000);
 
 			//mersinainte(0.3, 2000);
 
