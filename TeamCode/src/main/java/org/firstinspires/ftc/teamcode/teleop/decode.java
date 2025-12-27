@@ -190,16 +190,16 @@ public final class decode extends BaseOpMode {
 
 
 		double dFar = 15.0;
-		double posFar = 0.2;
+		double posFar = 0.22;
 
 		if (distanceCm <= 15.0 && distanceCm>=8.0) return shooterPosition = posNear;
-		else if(distanceCm<=8.0 && distanceCm>=2.0) return shooterPosition=0.1;
+		else if(distanceCm<=8.0 && distanceCm>=2.0) return shooterPosition=0.075;
 		else if(distanceCm<=2.0 && distanceCm>=-1) return shooterPosition=0;
 		else if (distanceCm >= dFar) return shooterPosition=posFar;
 		else return shooterPosition=0.0;
 
 
-	//	return posNear + (distanceCm - dNear) * (posFar - posNear) / (dFar - dNear);
+		//	return posNear + (distanceCm - dNear) * (posFar - posNear) / (dFar - dNear);
 	}
 
 	private void ShooterAngle() {
@@ -234,7 +234,7 @@ public final class decode extends BaseOpMode {
 					if (shooterPosition < 0.0) shooterPosition = 0.0;
 					if (shooterPosition > 1.0) shooterPosition = 1.0;
 
-						robot.turretTumbler.setPosition(shooterPosition);
+					robot.turretTumbler.setPosition(shooterPosition);
 				}
 
 				// DEBUG: vezi exact ce se întâmplă
@@ -270,8 +270,7 @@ public final class decode extends BaseOpMode {
 				robot.turret.setIntakeDirection(IntakeDirection.STOP);
 				return;
 			}
-			if (x > 0) robot.turret.setIntakeDirection(IntakeDirection.SLOW_FORWARD);
-			else robot.turret.setIntakeDirection(IntakeDirection.SLOW_REVERSE);
+			robot.turret.setIntakeDirection(x > 0 ? IntakeDirection.SLOW_FORWARD : IntakeDirection.SLOW_REVERSE);
 			return;
 		}
 
@@ -282,35 +281,34 @@ public final class decode extends BaseOpMode {
 			return;
 		}
 
-		double tx = result.getTx();
-		double absTx = Math.abs(tx);
+		double tx = result.getTx(); // offset orizontal fata de target
 
 		// --- HYSTERESIS LOGIC ---
 		if (turretAligned) {
-			// We are currently "locked on". Only unlock if error gets bigger than START threshold.
-			if (absTx > TURRET_LL_DEADZONE_START) {
-				turretAligned = false;  // need to move again
+			if (Math.abs(tx) > TURRET_LL_DEADZONE_START) {
+				turretAligned = false;
 			} else {
-				// Stay aligned & keep turret stopped
 				robot.turret.setIntakeDirection(IntakeDirection.STOP);
 				return;
 			}
 		} else {
-			// We are currently moving/aiming. Lock on once we get within STOP threshold.
-			if (absTx < TURRET_LL_DEADZONE_STOP) {
+			if (Math.abs(tx) < TURRET_LL_DEADZONE_STOP) {
 				turretAligned = true;
 				robot.turret.setIntakeDirection(IntakeDirection.STOP);
 				return;
 			}
 		}
 
-		// --- If we're here, we need to move the turret ---
+		// --- MOVE TURRET ---
 		if (tx > 0) {
 			robot.turret.setIntakeDirection(IntakeDirection.SLOW_FORWARD);
-		} else {
+		} else if (tx <  0){
 			robot.turret.setIntakeDirection(IntakeDirection.SLOW_REVERSE);
 		}
 	}
+
+
+
 
 	private void Intake() {
 		if (driveInput.isPressed(Keybindings.Drive.INTAKE_KEY)) {
