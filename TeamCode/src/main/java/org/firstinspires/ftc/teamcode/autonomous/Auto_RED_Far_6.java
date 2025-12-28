@@ -13,18 +13,18 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import org.firstinspires.ftc.teamcode.BaseOpMode;
 import org.firstinspires.ftc.teamcode.RobotHardware;
-import org.firstinspires.ftc.teamcode.autonomous.waypoints.waypoints;
+import org.firstinspires.ftc.teamcode.autonomous.waypoints.WAYPOINTS_RED_FAR;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@Autonomous(name = "Autonom_Stanga", group = "Auto")
-public class Auto_Stanga_6 extends BaseOpMode {
+@Autonomous(name = "Autonom_RED", group = "Auto")
+public class Auto_RED_Far_6 extends BaseOpMode {
 	private RobotHardware robot;
 
 	// === TUNE THESE ===
 	private static final int AUTON_TURRET_TICKS = 20;      // tune this
 	private static final double AUTON_SHOOTER_POS = 0.16;  // tune this
-	private static final double TURRET_HOLD_POWER = 0.12;  // tune 0.05–0.20
+	private static final double TURRET_HOLD_POWER = 0.1;  // tune 0.05–0.20
 
 	@Override
 	protected void OnInitialize() {
@@ -64,8 +64,38 @@ public class Auto_Stanga_6 extends BaseOpMode {
 		turret.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 	}
 
+	/** Create a fresh LL aim action each time (prevents "works once, then doesn't" from stale internal state). */
+	private Action newAimTurretLL() {
+		return new AimTurretWithLimelightAction(
+				this,
+				robot,
+				0.045,   // kP
+				0.12,    // minPower
+				0.40,    // maxPower
+				0.45,     // lockThreshold degrees
+				2500,    // timeout ms
+				+1.0,    // directionSign (keep as sign; tune kP instead)
+				TURRET_HOLD_POWER
+		);
+	}
+
+	/** Slightly more tolerant aim for the 2nd shooting cycle (recover after fast drive + vibration). */
+	private Action newAimTurretLLFinal() {
+		return new AimTurretWithLimelightAction(
+				this,
+				robot,
+				0.055,   // kP (a bit stronger)
+				0.12,    // minPower
+				0.45,    // maxPower (a bit higher)
+				0.70,    // lockThreshold degrees (more forgiving)
+				3500,    // timeout ms (more time to reacquire)
+				+1.0,    // directionSign
+				TURRET_HOLD_POWER
+		);
+	}
+
 	private static class AimTurretWithLimelightAction implements Action {
-		private final Auto_Stanga_6 op;      // to access turretHoldCurrent()
+		private final Auto_RED_Far_6 op;      // to access turretHoldCurrent()
 		private final RobotHardware robot;
 
 		private final double kP;
@@ -80,7 +110,7 @@ public class Auto_Stanga_6 extends BaseOpMode {
 		private long startTimeMs = 0;
 
 		AimTurretWithLimelightAction(
-				Auto_Stanga_6 op,
+				Auto_RED_Far_6 op,
 				RobotHardware robot,
 				double kP,
 				double minPower,
@@ -90,7 +120,6 @@ public class Auto_Stanga_6 extends BaseOpMode {
 				double directionSign,
 				double holdPower
 		) {
-
 			this.op = op;
 			this.robot = robot;
 			this.kP = kP;
@@ -134,6 +163,11 @@ public class Auto_Stanga_6 extends BaseOpMode {
 			}
 
 			LLResult result = robot.limelight.getLatestResult();
+
+			// Useful debug (especially for the 2nd cycle)
+			packet.put("LL valid", (result != null && result.isValid()));
+			packet.put("Turret mode", turretMotor.getMode().toString());
+
 			if (result == null || !result.isValid()) {
 				// No target -> stop turning, but keep waiting until timeout (do NOT finish yet)
 				turretMotor.setPower(0);
@@ -181,61 +215,48 @@ public class Auto_Stanga_6 extends BaseOpMode {
 
 		/// === PATH ACTIONS ===
 
-		// START -> SHOOT_BACK
-		Action goToShootBack = robot.drivetrain.actionBuilder(waypoints.START)
-				.splineTo(
-						new Vector2d(waypoints.SHOOT_BACK.position.x, waypoints.SHOOT_BACK.position.y),
-						waypoints.SHOOT_BACK.heading.toDouble()
-				)
+		// START -> SHOOT
+		Action goToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.START)
+				.setTangent(Math.toRadians(90))
+				.lineToY(WAYPOINTS_RED_FAR.SHOOT.position.y)
 				.build();
 
-		// SHOOT_BACK -> PICKUP1
-		Action goToPickup = robot.drivetrain.actionBuilder(waypoints.SHOOT_BACK)
-				.splineTo(
-						new Vector2d(waypoints.PICKUP1.position.x, waypoints.PICKUP1.position.y),
-						waypoints.PICKUP1.heading.toDouble()
-				)
+		// SHOOT -> PICKUP
+		Action goToPickupF = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.SHOOT)
+				.setTangent(Math.toRadians(90))
+				.lineToY(WAYPOINTS_RED_FAR.PICKUPF.position.y)
 				.build();
 
-		Action goBackPickup = robot.drivetrain.actionBuilder(waypoints.FPICKUP1)
-				.lineToY(waypoints.PICKUP1.position.y)
+		Action goToPickup = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.PICKUPF)
+				.setTangent(Math.toRadians(0))
+				.lineToX(WAYPOINTS_RED_FAR.PICKUP.position.x)
 				.build();
 
-		// Pickup movement
-		Action intakeLine = robot.drivetrain.actionBuilder(waypoints.PICKUP1)
-				.lineToY(waypoints.FPICKUP1.position.y)
+		Action goToPickupL = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.PICKUP)
+				.setTangent(Math.toRadians(0))
+				.lineToX(WAYPOINTS_RED_FAR.PICKUPL.position.x)
 				.build();
 
-		// FPICKUP1 -> SHOOT_BACK
-		Action goToShootBack2 = robot.drivetrain.actionBuilder(waypoints.FPICKUP1)
-				.splineTo(
-						new Vector2d(waypoints.SHOOT_BACK.position.x, waypoints.SHOOT_BACK.position.y),
-						waypoints.SHOOT_BACK.heading.toDouble()
-				)
+		// BACK TO SHOOT
+		Action backToPickup = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.PICKUPL)
+				.setTangent(Math.toRadians(180))
+				.lineToX(WAYPOINTS_RED_FAR.PICKUPF.position.x)
+				.build();
+
+		Action backToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.PICKUPF)
+				.setTangent(Math.toRadians(-90))
+				.lineToY(WAYPOINTS_RED_FAR.SHOOT.position.y)
 				.build();
 
 		// ending location
-		Action finishLine = robot.drivetrain.actionBuilder((waypoints.SHOOT_BACK))
+		Action finishLine = robot.drivetrain.actionBuilder((WAYPOINTS_RED_FAR.SHOOT))
 				.splineTo(
-						new Vector2d(waypoints.FINISH.position.x, waypoints.FINISH.position.y),
-						waypoints.FINISH.heading.toDouble()
+						new Vector2d(WAYPOINTS_RED_FAR.PARK.position.x, WAYPOINTS_RED_FAR.PARK.position.y),
+						WAYPOINTS_RED_FAR.PARK.heading.toDouble()
 				)
 				.build();
 
 		/// === SHOOTER AND INTAKE ACTIONS ===
-
-		// LL aim action (tune)
-		Action aimTurretLL = new AimTurretWithLimelightAction(
-				this,
-				robot,
-				0.045,   // kP
-				0.12,    // minPower
-				0.40,    // maxPower
-				0.45,     // lockThreshold degrees
-				2500,    // timeout ms
-				+1.0,    // directionSign
-				TURRET_HOLD_POWER
-		);
 
 		// start shooter and open stopper
 		Action shooter_on = packet -> {
@@ -302,11 +323,11 @@ public class Auto_Stanga_6 extends BaseOpMode {
 
 		Actions.runBlocking(
 				RunSequentially(
-						goToShootBack,
+						goToShoot,
 						WaitFor(0.3),
 
 						// Aim + tilt
-						aimTurretLL,
+						newAimTurretLL(),
 						setAutonShooterAngle,
 						WaitFor(0.3),
 
@@ -320,14 +341,14 @@ public class Auto_Stanga_6 extends BaseOpMode {
 						WaitFor(1.2),
 
 						// BALL 2
-						aimTurretLL,
+						newAimTurretLL(),
 						shootArtifact,
 						WaitFor(0.30),
 						stopShooting,
 						WaitFor(1.2),
 
 						// BALL 3
-						aimTurretLL,
+						newAimTurretLL(),
 						setAutonShooterAngle,
 						shootArtifact,
 						WaitFor(0.55),
@@ -338,28 +359,31 @@ public class Auto_Stanga_6 extends BaseOpMode {
 						shooter_off,
 
 						// pickup
-						goToPickup,
+						goToPickupF,
 						WaitFor(0.2),
+
+						goToPickup,
+						WaitFor(0.1),
 
 						startIntake,
 						WaitFor(0.1),
 
-						intakeLine,
+						goToPickupL,
 						WaitFor(0.6),
 
 						stopIntake,
 						WaitFor(0.4),
 
 						// return (you had goToPickup again; leaving as-is)
-						goToPickup,
+						backToPickup,
+						WaitFor(0.2),
+						backToShoot,
 						WaitFor(0.3),
-						goToShootBack2,
-						WaitFor(0.8),
 
 						// Aim + tilt
-						aimTurretLL,
+						newAimTurretLLFinal(),
 						setAutonShooterAngle,
-						WaitFor(0.3),
+						WaitFor(0.5),
 
 						shooter_on,
 						WaitFor(1.0),
@@ -371,7 +395,7 @@ public class Auto_Stanga_6 extends BaseOpMode {
 						WaitFor(1.3),
 
 						// BALL 2
-						aimTurretLL,
+						newAimTurretLLFinal(),
 						setAutonShooterAngle,
 						shootArtifact,
 						WaitFor(0.33),
@@ -379,7 +403,7 @@ public class Auto_Stanga_6 extends BaseOpMode {
 						WaitFor(1.2),
 
 						// BALL 3
-						aimTurretLL,
+						newAimTurretLLFinal(),
 						setAutonShooterAngle,
 						shootArtifact,
 						WaitFor(0.5),

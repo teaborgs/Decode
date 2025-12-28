@@ -13,12 +13,12 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import org.firstinspires.ftc.teamcode.BaseOpMode;
 import org.firstinspires.ftc.teamcode.RobotHardware;
-import org.firstinspires.ftc.teamcode.autonomous.waypoints.waypointsRED;
+import org.firstinspires.ftc.teamcode.autonomous.waypoints.WAYPOINTS_BLUE_FAR;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@Autonomous(name = "Autonom_RED", group = "Auto")
-public class Auto_RED_6 extends BaseOpMode {
+@Autonomous(name = "Autonom_Blue", group = "Auto")
+public class Auto_BLUE_Far_6 extends BaseOpMode {
 	private RobotHardware robot;
 
 	// === TUNE THESE ===
@@ -95,7 +95,7 @@ public class Auto_RED_6 extends BaseOpMode {
 	}
 
 	private static class AimTurretWithLimelightAction implements Action {
-		private final Auto_RED_6 op;      // to access turretHoldCurrent()
+		private final Auto_BLUE_Far_6 op;      // to access turretHoldCurrent()
 		private final RobotHardware robot;
 
 		private final double kP;
@@ -110,7 +110,7 @@ public class Auto_RED_6 extends BaseOpMode {
 		private long startTimeMs = 0;
 
 		AimTurretWithLimelightAction(
-				Auto_RED_6 op,
+				Auto_BLUE_Far_6 op,
 				RobotHardware robot,
 				double kP,
 				double minPower,
@@ -216,43 +216,43 @@ public class Auto_RED_6 extends BaseOpMode {
 		/// === PATH ACTIONS ===
 
 		// START -> SHOOT
-		Action goToShoot = robot.drivetrain.actionBuilder(waypointsRED.START)
-				.setTangent(Math.toRadians(90))
-				.lineToY(waypointsRED.SHOOT.position.y)
+		Action goToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.START)
+				.setTangent(Math.toRadians(-90))
+				.lineToY(WAYPOINTS_BLUE_FAR.SHOOT.position.y)
 				.build();
 
 		// SHOOT -> PICKUP
-		Action goToPickupF = robot.drivetrain.actionBuilder(waypointsRED.SHOOT)
-				.setTangent(Math.toRadians(90))
-				.lineToY(waypointsRED.PICKUPF.position.y)
+		Action goToPickupF = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.SHOOT)
+				.setTangent(Math.toRadians(-90))
+				.lineToY(WAYPOINTS_BLUE_FAR.PICKUPF.position.y)
 				.build();
 
-		Action goToPickup = robot.drivetrain.actionBuilder(waypointsRED.PICKUPF)
+		Action goToPickup = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUPF)
 				.setTangent(Math.toRadians(0))
-				.lineToX(waypointsRED.PICKUP.position.x)
+				.lineToX(WAYPOINTS_BLUE_FAR.PICKUP.position.x)
 				.build();
 
-		Action goToPickupL = robot.drivetrain.actionBuilder(waypointsRED.PICKUP)
+		Action goToPickupL = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUP)
 				.setTangent(Math.toRadians(0))
-				.lineToX(waypointsRED.PICKUPL.position.x)
+				.lineToX(WAYPOINTS_BLUE_FAR.PICKUPL.position.x)
 				.build();
 
 		// BACK TO SHOOT
-		Action backToPickup = robot.drivetrain.actionBuilder(waypointsRED.PICKUPL)
+		Action backToPickup = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUPL)
 				.setTangent(Math.toRadians(180))
-				.lineToX(waypointsRED.PICKUPF.position.x)
+				.lineToX(WAYPOINTS_BLUE_FAR.PICKUPF.position.x)
 				.build();
 
-		Action backToShoot = robot.drivetrain.actionBuilder(waypointsRED.PICKUPF)
-				.setTangent(Math.toRadians(-90))
-				.lineToY(waypointsRED.SHOOT.position.y)
+		Action backToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUPF)
+				.setTangent(Math.toRadians(90))
+				.lineToY(WAYPOINTS_BLUE_FAR.SHOOT.position.y)
 				.build();
 
 		// ending location
-		Action finishLine = robot.drivetrain.actionBuilder((waypointsRED.SHOOT))
+		Action finishLine = robot.drivetrain.actionBuilder((WAYPOINTS_BLUE_FAR.SHOOT))
 				.splineTo(
-						new Vector2d(waypointsRED.PARK.position.x, waypointsRED.PARK.position.y),
-						waypointsRED.PARK.heading.toDouble()
+						new Vector2d(WAYPOINTS_BLUE_FAR.PARK.position.x, WAYPOINTS_BLUE_FAR.PARK.position.y),
+						WAYPOINTS_BLUE_FAR.PARK.heading.toDouble()
 				)
 				.build();
 

@@ -2,7 +2,7 @@ package org.firstinspires.ftc.teamcode.autonomous.waypoints;
 
 import com.acmerobotics.roadrunner.Pose2d;
 
-public class waypointsBLUE
+public class WAYPOINTS_BLUE_FAR
 {
 	public static final Pose2d START      = new Pose2d(0.0,   0.0, Math.toRadians(0));
 	public static final Pose2d SHOOT      = new Pose2d(0.0, -19.40, Math.toRadians(0));
