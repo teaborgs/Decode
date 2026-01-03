@@ -12,6 +12,7 @@ public class IntakeSystem extends AbstractSystem
 	public enum IntakeDirection
 	{
 		FORWARD,
+		FORWARDCLOSE,
 		SLOW_FORWARD,
 		SLOW_REVERSE,
 		REVERSE,
@@ -42,6 +43,9 @@ public class IntakeSystem extends AbstractSystem
 	{
 		switch (direction)
 		{
+			case FORWARDCLOSE:
+				intakeMotor.setPower(0.8f);
+				break;
 			case FORWARD:
 				intakeMotor.setPower(1f);
 				break;

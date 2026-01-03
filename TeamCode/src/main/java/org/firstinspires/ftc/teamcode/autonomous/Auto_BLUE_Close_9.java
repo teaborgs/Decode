@@ -19,13 +19,13 @@ import org.firstinspires.ftc.teamcode.autonomous.waypoints.WAYPOINTS_RED_CLOSE;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@Autonomous(name = "Autonom_Blue_Close6", group = "Auto")
-public class Auto_BLUE_Close_6 extends BaseOpMode {
+@Autonomous(name = "Autonom_Blue_Close9", group = "Auto")
+public class Auto_BLUE_Close_9 extends BaseOpMode {
 	private RobotHardware robot;
 
 	// === TUNE THESE ===
 	private static final int AUTON_TURRET_TICKS = 20;      // tune this
-	private static final double AUTON_SHOOTER_POS = 0.67;  // tune this
+	private static final double AUTON_SHOOTER_POS = 0.69;  // tune this
 	private static final double TURRET_HOLD_POWER = 0.1;  // tune 0.05–0.20
 
 	@Override
@@ -81,6 +81,20 @@ public class Auto_BLUE_Close_6 extends BaseOpMode {
 		);
 	}
 
+	private Action thirdAimTurretLL() {
+		return new AimTurretWithLimelightAction(
+				this,
+				robot,
+				0.045,   // kP
+				0.12,    // minPower
+				0.40,    // maxPower
+				0.45,     // lockThreshold degrees
+				2500,    // timeout ms
+				+1.0,    // directionSign (keep as sign; tune kP instead)
+				TURRET_HOLD_POWER
+		);
+	}
+
 	/** Slightly more tolerant aim for the 2nd shooting cycle (recover after fast drive + vibration). */
 	private Action newAimTurretLLFinal() {
 		return new AimTurretWithLimelightAction(
@@ -97,7 +111,7 @@ public class Auto_BLUE_Close_6 extends BaseOpMode {
 	}
 
 	private static class AimTurretWithLimelightAction implements Action {
-		private final Auto_BLUE_Close_6 op;      // to access turretHoldCurrent()
+		private final Auto_BLUE_Close_9 op;      // to access turretHoldCurrent()
 		private final RobotHardware robot;
 
 		private final double kP;
@@ -112,7 +126,7 @@ public class Auto_BLUE_Close_6 extends BaseOpMode {
 		private long startTimeMs = 0;
 
 		AimTurretWithLimelightAction(
-				Auto_BLUE_Close_6 op,
+				Auto_BLUE_Close_9 op,
 				RobotHardware robot,
 				double kP,
 				double minPower,
@@ -250,9 +264,12 @@ public class Auto_BLUE_Close_6 extends BaseOpMode {
 				)
 				.build();
 
+		//PICKUP2
+
 		double heading = WAYPOINTS_BLUE_CLOSE.SHOOT.heading.toDouble(); // -142°
 
 		double tanLeft = heading + Math.toRadians(90);
+
 		Action goToPickup2 =
 				robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_CLOSE.SHOOT)
 						.setTangent(tanLeft)
@@ -261,6 +278,52 @@ public class Auto_BLUE_Close_6 extends BaseOpMode {
 								heading
 						)
 						.build();
+
+		double tanForward = heading;
+
+		Action goToPickup2F =
+				robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_CLOSE.PICKUP2)
+						.setTangent(tanForward)
+						.splineToConstantHeading(
+								WAYPOINTS_BLUE_CLOSE.PICKUP2L.position,
+								heading
+						)
+						.build();
+
+		double tanBack2 = heading + Math.toRadians(180);
+
+		Action backToPickup2 =
+				robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_CLOSE.PICKUP2L)
+						.setTangent(tanBack2)
+						.splineToConstantHeading(
+								WAYPOINTS_BLUE_CLOSE.PICKUP2.position,
+								heading
+						)
+						.build();
+
+		double tanRight = heading - Math.toRadians(90);
+
+		Action backToShoot2 =
+				robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_CLOSE.PICKUP2L)
+						.setTangent(tanRight)
+						.splineToConstantHeading(
+								WAYPOINTS_BLUE_CLOSE.SHOOT.position,
+								heading
+						)
+						.build();
+
+		double headingback = WAYPOINTS_BLUE_CLOSE.SHOOT.heading.toDouble();
+
+		Action pickup2L_to_Shoot =
+				robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_CLOSE.PICKUP2L)
+						.setTangent(headingback) // pleacă drept înainte în direcția heading-ului
+						.splineToConstantHeading(
+								WAYPOINTS_BLUE_CLOSE.SHOOT.position,
+								headingback
+						)
+						.build();
+
+
 
 
 
@@ -337,14 +400,14 @@ public class Auto_BLUE_Close_6 extends BaseOpMode {
 		Actions.runBlocking(
 				RunSequentially(
 						goToShoot,
-						WaitFor(0.5),
+						WaitFor(0.35),
 						newAimTurretLL(),
 						setAutonShooterAngle,
 
 						shooter_on,
-						WaitFor(1.0),
+						WaitFor(0.5),
 						shootArtifact,
-						WaitFor(1.8),
+						WaitFor(1.5),
 						shooter_off,
 
 						goToPickup,
@@ -358,12 +421,34 @@ public class Auto_BLUE_Close_6 extends BaseOpMode {
 						newAimTurretLLFinal(),
 						setAutonShooterAngle,
 						shooter_on,
-						WaitFor(1.0),
+						WaitFor(0.5),
 						shootArtifact,
-						WaitFor(1.8),
+						WaitFor(1.5),
 						shooter_off,
 						stopShooting,
-						goToPickup2
+
+						goToPickup2,
+						WaitFor(0.4),
+						startIntake,
+						WaitFor(0.25),
+						goToPickup2F,
+						WaitFor(0.35),
+						stopIntake,
+						pickup2L_to_Shoot,
+						WaitFor(0.25),
+
+						newAimTurretLL(),
+						setAutonShooterAngle,
+						WaitFor(0.3),
+						shooter_on,
+						WaitFor(0.5),
+						shootArtifact,
+						WaitFor(1.5),
+						shooter_off,
+						goToPickup2,
+						WaitFor(1.0)
+
+
 
 
 

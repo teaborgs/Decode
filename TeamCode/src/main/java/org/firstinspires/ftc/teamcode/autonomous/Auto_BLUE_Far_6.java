@@ -17,13 +17,13 @@ import org.firstinspires.ftc.teamcode.autonomous.waypoints.WAYPOINTS_BLUE_FAR;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@Autonomous(name = "Autonom_Blue", group = "Auto")
+@Autonomous(name = "Autonom_Blue_Far6", group = "Auto")
 public class Auto_BLUE_Far_6 extends BaseOpMode {
 	private RobotHardware robot;
 
 	// === TUNE THESE ===
 	private static final int AUTON_TURRET_TICKS = 20;      // tune this
-	private static final double AUTON_SHOOTER_POS = 0.16;  // tune this
+	private static final double AUTON_SHOOTER_POS = 0.75;  // tune this
 	private static final double TURRET_HOLD_POWER = 0.1;  // tune 0.05–0.20
 
 	@Override
@@ -398,7 +398,7 @@ public class Auto_BLUE_Far_6 extends BaseOpMode {
 						newAimTurretLLFinal(),
 						setAutonShooterAngle,
 						shootArtifact,
-						WaitFor(0.33),
+						WaitFor(0.25),
 						stopShooting,
 						WaitFor(1.2),
 

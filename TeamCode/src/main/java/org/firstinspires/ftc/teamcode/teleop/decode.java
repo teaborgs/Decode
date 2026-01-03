@@ -186,15 +186,15 @@ public final class decode extends BaseOpMode {
 	// === helper: mapare distanță -> poziție servo în CM ===
 	private double shooterAngleFromDistanceCm(double distanceCm) {
 		double dNear = -1.0;
-		double posNear=0.18;
+		double posNear=0.6;
 
 
 		double dFar = 15.0;
-		double posFar = 0.22;
+		double posFar = 0.75;
 
 		if (distanceCm <= 15.0 && distanceCm>=8.0) return shooterPosition = posNear;
-		else if(distanceCm<=8.0 && distanceCm>=2.0) return shooterPosition=0.075;
-		else if(distanceCm<=2.0 && distanceCm>=-1) return shooterPosition=0;
+		else if(distanceCm<=8.0 && distanceCm>=2.0) return shooterPosition=0.7;
+		else if(distanceCm<=2.0 && distanceCm>=-1) return shooterPosition=0.7;
 		else if (distanceCm >= dFar) return shooterPosition=posFar;
 		else return shooterPosition=0.0;
 

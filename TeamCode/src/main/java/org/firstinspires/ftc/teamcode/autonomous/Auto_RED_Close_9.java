@@ -13,14 +13,13 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import org.firstinspires.ftc.teamcode.BaseOpMode;
 import org.firstinspires.ftc.teamcode.RobotHardware;
-import org.firstinspires.ftc.teamcode.autonomous.waypoints.WAYPOINTS_BLUE_CLOSE;
-import org.firstinspires.ftc.teamcode.autonomous.waypoints.WAYPOINTS_BLUE_FAR;
 import org.firstinspires.ftc.teamcode.autonomous.waypoints.WAYPOINTS_RED_CLOSE;
+import org.firstinspires.ftc.teamcode.autonomous.waypoints.WAYPOINTS_RED_FAR;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@Autonomous(name = "Autonom_Blue_Close6", group = "Auto")
-public class Auto_BLUE_Close_6 extends BaseOpMode {
+@Autonomous(name = "Autonom_Red_Close9", group = "Auto")
+public class Auto_RED_Close_9 extends BaseOpMode {
 	private RobotHardware robot;
 
 	// === TUNE THESE ===
@@ -97,7 +96,7 @@ public class Auto_BLUE_Close_6 extends BaseOpMode {
 	}
 
 	private static class AimTurretWithLimelightAction implements Action {
-		private final Auto_BLUE_Close_6 op;      // to access turretHoldCurrent()
+		private final Auto_RED_Close_9 op;      // to access turretHoldCurrent()
 		private final RobotHardware robot;
 
 		private final double kP;
@@ -112,7 +111,7 @@ public class Auto_BLUE_Close_6 extends BaseOpMode {
 		private long startTimeMs = 0;
 
 		AimTurretWithLimelightAction(
-				Auto_BLUE_Close_6 op,
+				Auto_RED_Close_9 op,
 				RobotHardware robot,
 				double kP,
 				double minPower,
@@ -219,20 +218,20 @@ public class Auto_BLUE_Close_6 extends BaseOpMode {
 
 		// START -> SHOOT
 
-		Action goToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_CLOSE.START)
+		Action goToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE.START)
 				.splineTo(
-						new Vector2d(WAYPOINTS_BLUE_CLOSE.SHOOT.position.x, WAYPOINTS_BLUE_CLOSE.SHOOT.position.y),
-						WAYPOINTS_BLUE_CLOSE.SHOOT.heading.toDouble()
+						new Vector2d(WAYPOINTS_RED_CLOSE.SHOOT.position.x, WAYPOINTS_RED_CLOSE.SHOOT.position.y),
+						WAYPOINTS_RED_CLOSE.SHOOT.heading.toDouble()
 				)
 				.build();
 
 
 		//PICKUP PATH
-		double tan = WAYPOINTS_BLUE_CLOSE.SHOOT.heading.toDouble(); // -142° în rad
-		Action goToPickup = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_CLOSE.SHOOT)
+		double tan = WAYPOINTS_RED_CLOSE.SHOOT.heading.toDouble(); // -142° în rad
+		Action goToPickup = robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE.SHOOT)
 				.setTangent(tan)
 				.splineToConstantHeading(
-						new Vector2d(WAYPOINTS_BLUE_CLOSE.PICKUPL1.position.x, WAYPOINTS_BLUE_CLOSE.PICKUPL1.position.y),
+						new Vector2d(WAYPOINTS_RED_CLOSE.PICKUPL1.position.x, WAYPOINTS_RED_CLOSE.PICKUPL1.position.y),
 						tan
 				)
 				.build();
@@ -242,28 +241,72 @@ public class Auto_BLUE_Close_6 extends BaseOpMode {
 
 		double tanBack = tan + Math.PI;
 
-		Action backToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_CLOSE.PICKUPL1)
+		Action backToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE.PICKUPL1)
 				.setTangent(tanBack)
 				.splineToConstantHeading(
-						new Vector2d(WAYPOINTS_BLUE_CLOSE.SHOOT.position.x, WAYPOINTS_BLUE_CLOSE.SHOOT.position.y),
+						new Vector2d(WAYPOINTS_RED_CLOSE.SHOOT.position.x, WAYPOINTS_RED_CLOSE.SHOOT.position.y),
 						tanBack
 				)
 				.build();
 
-		double heading = WAYPOINTS_BLUE_CLOSE.SHOOT.heading.toDouble(); // -142°
+		//PICKUP2
+
+		double heading = WAYPOINTS_RED_CLOSE.SHOOT.heading.toDouble(); // -142°
 
 		double tanLeft = heading + Math.toRadians(90);
+
 		Action goToPickup2 =
-				robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_CLOSE.SHOOT)
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE.SHOOT)
 						.setTangent(tanLeft)
 						.splineToConstantHeading(
-								WAYPOINTS_BLUE_CLOSE.PICKUP2.position,
+								WAYPOINTS_RED_CLOSE.PICKUP2.position,
 								heading
 						)
 						.build();
 
+		double tanForward = heading;
 
+		Action goToPickup2F =
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE.PICKUP2)
+						.setTangent(tanForward)
+						.splineToConstantHeading(
+								WAYPOINTS_RED_CLOSE.PICKUP2L.position,
+								heading
+						)
+						.build();
 
+		double tanBack2 = heading + Math.toRadians(180);
+
+		Action backToPickup2 =
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE.PICKUP2L)
+						.setTangent(tanBack2)
+						.splineToConstantHeading(
+								WAYPOINTS_RED_CLOSE.PICKUP2.position,
+								heading
+						)
+						.build();
+
+		double tanRight = heading - Math.toRadians(90);
+
+		Action backToShoot2 =
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE.PICKUP2L)
+						.setTangent(tanRight)
+						.splineToConstantHeading(
+								WAYPOINTS_RED_CLOSE.SHOOT.position,
+								heading
+						)
+						.build();
+
+		double headingback = WAYPOINTS_RED_CLOSE.SHOOT.heading.toDouble();
+
+		Action pickup2L_to_Shoot =
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE.PICKUP2L)
+						.setTangent(headingback) // pleacă drept înainte în direcția heading-ului
+						.splineToConstantHeading(
+								WAYPOINTS_RED_CLOSE.SHOOT.position,
+								heading
+						)
+						.build();
 
 
 
@@ -337,12 +380,12 @@ public class Auto_BLUE_Close_6 extends BaseOpMode {
 		Actions.runBlocking(
 				RunSequentially(
 						goToShoot,
-						WaitFor(0.5),
+						WaitFor(0.35),
 						newAimTurretLL(),
 						setAutonShooterAngle,
 
 						shooter_on,
-						WaitFor(1.0),
+						WaitFor(0.8),
 						shootArtifact,
 						WaitFor(1.8),
 						shooter_off,
@@ -358,12 +401,33 @@ public class Auto_BLUE_Close_6 extends BaseOpMode {
 						newAimTurretLLFinal(),
 						setAutonShooterAngle,
 						shooter_on,
-						WaitFor(1.0),
+						WaitFor(0.5),
 						shootArtifact,
 						WaitFor(1.8),
 						shooter_off,
 						stopShooting,
+
+						goToPickup2,
+						WaitFor(0.4),
+						startIntake,
+						WaitFor(0.25),
+						goToPickup2F,
+						WaitFor(0.35),
+						stopIntake,
+						pickup2L_to_Shoot,
+						WaitFor(0.3),
+
+
+						newAimTurretLL(),
+						WaitFor(0.3),
+						shooter_on,
+						WaitFor(0.6),
+						shootArtifact,
+						WaitFor(1.8),
+						shooter_off,
 						goToPickup2
+
+
 
 
 
