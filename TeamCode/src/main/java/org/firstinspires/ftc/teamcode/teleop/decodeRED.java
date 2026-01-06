@@ -1,29 +1,20 @@
 package org.firstinspires.ftc.teamcode.teleop;
 
-import android.util.JsonReader;
-import android.util.JsonToken;
-
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Vector2d;
+import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import org.firstinspires.ftc.onbotjava.JavaSourceFile;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.BaseOpMode;
 import org.firstinspires.ftc.teamcode.InputSystem;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem.IntakeDirection;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
-import org.firstinspires.ftc.teamcode.systems.TransferSystem;
 
-import com.qualcomm.hardware.limelightvision.LLResult;
-import com.qualcomm.hardware.limelightvision.LLResultTypes;
-import com.qualcomm.hardware.limelightvision.LLStatus;
-import com.qualcomm.hardware.limelightvision.Limelight3A;
-
-@TeleOp(name = "\uD80C\uDC1B\uD83C\uDF46decodeaza-mi-l albastru\uD80C\uDC1B\uD83C\uDF46", group = "TeleOp")
-public final class decode extends BaseOpMode {
+@TeleOp(name = "\uD80C\uDC1B\uD83C\uDF46decodeaza-mi-l rosu\uD80C\uDC1B\uD83C\uDF46", group = "TeleOp")
+public final class decodeRED extends BaseOpMode {
 	private InputSystem driveInput, armInput;
 
 	private RobotHardware robot;
@@ -70,7 +61,7 @@ public final class decode extends BaseOpMode {
 	protected void OnStart() {
 		robot = new RobotHardware(hardwareMap);
 		robot.init();
-		robot.limelight.pipelineSwitch(0);
+		robot.limelight.pipelineSwitch(1);
 		shooterPosition = robot.turretTumbler.getPosition();
 	}
 

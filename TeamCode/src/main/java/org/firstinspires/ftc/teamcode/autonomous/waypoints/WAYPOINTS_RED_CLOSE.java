@@ -19,6 +19,9 @@ public class WAYPOINTS_RED_CLOSE {
 	public static final Pose2d PICKUP2 =
 			new Pose2d(70, 26.08, Math.toRadians(142));
 
+	public static final Pose2d FINISHLINE =
+			new Pose2d(70, 26.08, Math.toRadians(142));
+
 	public static final Pose2d PICKUP2L =
 			new Pose2d(36.53, 55.6, Math.toRadians(142));
 }

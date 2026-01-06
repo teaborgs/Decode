@@ -31,6 +31,7 @@ public class Auto_RED_Close_9 extends BaseOpMode {
 	protected void OnInitialize() {
 		robot = new RobotHardware(hardwareMap);
 		robot.init();
+		robot.limelight.pipelineSwitch(1);
 
 		// Zero turret encoder at known starting angle
 		DcMotorEx turretMotor = robot.turret.getMotor();
@@ -74,7 +75,7 @@ public class Auto_RED_Close_9 extends BaseOpMode {
 				0.12,    // minPower
 				0.40,    // maxPower
 				0.45,     // lockThreshold degrees
-				2500,    // timeout ms
+				750,    // timeout ms
 				+1.0,    // directionSign (keep as sign; tune kP instead)
 				TURRET_HOLD_POWER
 		);
@@ -89,7 +90,7 @@ public class Auto_RED_Close_9 extends BaseOpMode {
 				0.12,    // minPower
 				0.45,    // maxPower (a bit higher)
 				0.70,    // lockThreshold degrees (more forgiving)
-				3500,    // timeout ms (more time to reacquire)
+				750,    // timeout ms (more time to reacquire)
 				+1.0,    // directionSign
 				TURRET_HOLD_POWER
 		);
@@ -222,6 +223,13 @@ public class Auto_RED_Close_9 extends BaseOpMode {
 				.splineTo(
 						new Vector2d(WAYPOINTS_RED_CLOSE.SHOOT.position.x, WAYPOINTS_RED_CLOSE.SHOOT.position.y),
 						WAYPOINTS_RED_CLOSE.SHOOT.heading.toDouble()
+				)
+				.build();
+
+		Action finishline = robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE.SHOOT)
+				.splineTo(
+						new Vector2d(WAYPOINTS_RED_CLOSE.FINISHLINE.position.x, WAYPOINTS_RED_CLOSE.FINISHLINE.position.y),
+						WAYPOINTS_RED_CLOSE.FINISHLINE.heading.toDouble()
 				)
 				.build();
 
@@ -425,7 +433,8 @@ public class Auto_RED_Close_9 extends BaseOpMode {
 						shootArtifact,
 						WaitFor(1.8),
 						shooter_off,
-						goToPickup2
+						finishline,
+						WaitFor(1.0)
 
 
 
