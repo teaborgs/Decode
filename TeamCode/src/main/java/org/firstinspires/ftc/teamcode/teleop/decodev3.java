@@ -1,29 +1,21 @@
 package org.firstinspires.ftc.teamcode.teleop;
 
-import android.util.JsonReader;
-import android.util.JsonToken;
-
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import org.firstinspires.ftc.onbotjava.JavaSourceFile;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.BaseOpMode;
 import org.firstinspires.ftc.teamcode.InputSystem;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem.IntakeDirection;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
-import org.firstinspires.ftc.teamcode.systems.TransferSystem;
 
 import com.qualcomm.hardware.limelightvision.LLResult;
-import com.qualcomm.hardware.limelightvision.LLResultTypes;
-import com.qualcomm.hardware.limelightvision.LLStatus;
-import com.qualcomm.hardware.limelightvision.Limelight3A;
 
-@TeleOp(name = "\uD80C\uDC1B\uD83C\uDF46decodeaza-mi-l albastru\uD80C\uDC1B\uD83C\uDF46", group = "TeleOp")
-public final class decode extends BaseOpMode {
+@TeleOp(name = "\uD80C\uDC1B\uD83C\uDF46decodeaza-mi-l v3\uD80C\uDC1B\uD83C\uDF46", group = "TeleOp")
+public final class decodev3 extends BaseOpMode {
 	private InputSystem driveInput, armInput;
 
 	private RobotHardware robot;
@@ -42,6 +34,7 @@ public final class decode extends BaseOpMode {
 			public static final InputSystem.Axis DRIVE_ROT_L = new InputSystem.Axis("left_trigger");
 			public static final InputSystem.Axis DRIVE_ROT_R = new InputSystem.Axis("right_trigger");
 			public static final InputSystem.Key LL_AIM = new InputSystem.Key("dpad_up");
+			public static final InputSystem.Key ODO_LOCK = new InputSystem.Key("dpad_right");
 			public static final InputSystem.Key EXTENDO_HALF_KEY = new InputSystem.Key("dpad_left");
 			public static final InputSystem.Key EXTENDO_ZERO_KEY = new InputSystem.Key("dpad_down");
 			public static final InputSystem.Key GRAB_TRANSFER_KEY = new InputSystem.Key("a");
@@ -89,14 +82,30 @@ public final class decode extends BaseOpMode {
 		}
 		prevAutoShooterKeyPressed = autoShooterKey;
 
-		// === TOGGLE auto_aim with DPAD_UP ===
+		// === Turret mode toggles ===
+// DPAD_UP: MANUAL <-> LL_ONLY
 		boolean llAimPressed = driveInput.isPressed(Keybindings.Drive.LL_AIM);
-
 		if (llAimPressed && !prevLlAimPressed) {
-			auto_aim = !auto_aim;  // toggle
-			turretAligned = false; // when switching modes, reset lock state
+			if (turretMode == TurretAimMode.MANUAL) turretMode = TurretAimMode.LL_ONLY;
+			else turretMode = TurretAimMode.MANUAL;
+
+			odoLocked = false;
+			turretAligned = false;
 		}
 		prevLlAimPressed = llAimPressed;
+
+// DPAD_RIGHT: LL_ONLY <-> ODO_LOCK
+		boolean odoLockPressed = driveInput.isPressed(Keybindings.Drive.ODO_LOCK);
+		if (odoLockPressed && !prevOdoLockPressed) {
+			if (turretMode != TurretAimMode.ODO_LOCK) {
+				turretMode = TurretAimMode.ODO_LOCK;
+			} else {
+				turretMode = TurretAimMode.LL_ONLY;
+			}
+			odoLocked = false;
+			turretAligned = false;
+		}
+		prevOdoLockPressed = odoLockPressed;
 
 		boolean autoAngleKey = driveInput.isPressed(Keybindings.Drive.AUTO_SHOOTER_DISABLE_KEY);
 
@@ -127,16 +136,59 @@ public final class decode extends BaseOpMode {
 	private static final double TURRET_DEADZONE = 0.12;
 	private static final double SHOOTER_DEADZONE = 0.15;
 	private boolean transfer_servo = false;
-	private boolean auto_aim = true;
+	private enum TurretAimMode { MANUAL, LL_ONLY, ODO_LOCK }
+	private TurretAimMode turretMode = TurretAimMode.LL_ONLY; // start like before (auto aim on)
+
+	// toggle edge-detect
+	private boolean prevLlAimPressed = false;
+	private boolean prevOdoLockPressed = false;
+
+	// ODO lock state
+	private boolean odoLocked = false;
+	private double lockHeadingRad = 0.0;
+	private int lockTurretTicks = 0;
+	private int lastTargetTicks = 0;
+	private double prevHeadingRad = 0.0;
+	private double prevTimeSec = 0.0;
+
+
+
 	private double shooterPosition = 0.5;
 
-	private static final double TURRET_LL_DEADZONE_STOP  = 2.0; // when to STOP moving
-	private static final double TURRET_LL_DEADZONE_START = 3.0; // when to START moving again
+	private static final int TURRET_MIN_TICKS = -335;
+	private static final int TURRET_MAX_TICKS =  307;
 
-	private boolean turretAligned = false; // are we currently "locked on"?
-	private boolean prevLlAimPressed = false;
+	// ODO conversion (start value; can tune later)
+	private static final double TURRET_TICKS_PER_RAD = 380.0;
+
+
+	private static final double ODO_GAIN = 0.30; // turret follows 30% of robot rotation in ODO_LOCK (tune 0.20–0.50)
+	private static final int MAX_TARGET_STEP = 8; // max change in target ticks per loop in ODO_LOCK (tune 6–15)
+	// Limelight aiming
+	private static final double LL_DEADZONE_START = 1.6; // deg (hysteresis start moving)
+	private static final double LL_DEADZONE_STOP  = 0.9; // deg (hysteresis stop moving)
+
+	private static final double LL_KP_FAST  = 0.020; // power per deg (LL_ONLY)
+	private static final double LL_KP_SLOW  = 0.010; // power per deg (ODO micro)
+	private static final double LL_MAX_FAST = 0.55;
+	private static final double LL_MAX_SLOW = 0.25;
+
+	// Hold (ticks) controller for ODO lock
+	private static final double HOLD_KP  = 0.005;
+	private static final double HOLD_MAX = 0.35;
+
+	private boolean turretAligned = false; // hysteresis state for LL aim
 	private boolean prevAutoShooterKeyPressed = false;
 	private boolean prevAutoAngleKeyPressed = false;
+
+	private static final double LL_MICRO_DEADZONE_DEG = 0.67; // smaller than before
+	private static final double LL_TICKS_PER_DEG = 4.0;      // start 2.0–5.0
+	private static final double LL_MICRO_GAIN = 0.9;         // 0..1, scales the nudge
+
+	// Re-lock (când LL e centrat, corectează drift-ul odometriei)
+	private static final double RELOCK_TX_DEG = 1.0;     // cât de aproape de centru trebuie să fie
+	private static final double RELOCK_ALPHA  = 0.06;    // cât de repede se “mută” lock-ul (0.03–0.10)
+	private static final int RELOCK_MARGIN_TICKS = 20;   // nu relock dacă ești prea aproape de capete
 
 
 
@@ -187,7 +239,7 @@ public final class decode extends BaseOpMode {
 	// === helper: mapare distanță -> poziție servo în CM ===
 	private double shooterAngleFromDistanceCm(double distanceCm) {
 		double dNear = -1.0;
-		double posNear=0.65;
+		double posNear=0.6;
 
 
 		double dFar = 15.0;
@@ -263,49 +315,150 @@ public final class decode extends BaseOpMode {
 
 
 	private void Turret() {
-		double x = driveInput.getValue(Keybindings.Drive.TURRET_ANGLE);
+		// Manual input (right stick X)
+		double stick = driveInput.getValue(Keybindings.Drive.TURRET_ANGLE);
+		int ticks = robot.turret.getMotor().getCurrentPosition();
 
-		// === MANUAL MODE ===
-		if (!auto_aim) {
-			if (Math.abs(x) < TURRET_DEADZONE) {
-				robot.turret.setIntakeDirection(IntakeDirection.STOP);
+		// Safety: cut power if we try to drive into a hard limit
+		if (ticks <= TURRET_MIN_TICKS && stick < 0) stick = 0;
+		if (ticks >= TURRET_MAX_TICKS && stick > 0) stick = 0;
+
+		// === MANUAL ===
+		if (turretMode == TurretAimMode.MANUAL) {
+			if (Math.abs(stick) < TURRET_DEADZONE) {
+				robot.turret.getMotor().setPower(0);
 				return;
 			}
-			robot.turret.setIntakeDirection(x > 0 ? IntakeDirection.SLOW_FORWARD : IntakeDirection.SLOW_REVERSE);
+			robot.turret.getMotor().setPower(clamp(stick * 0.35, -0.35, 0.35));
 			return;
 		}
 
-		// === AUTO AIM MODE ===
-		LLResult result = robot.limelight.getLatestResult();
-		if (result == null || !result.isValid()) {
-			robot.turret.setIntakeDirection(IntakeDirection.STOP);
-			return;
-		}
+		// Read Limelight
+		LLResult result = (robot.limelight != null) ? robot.limelight.getLatestResult() : null;
+		boolean hasTarget = (result != null && result.isValid());
+		double txDeg = hasTarget ? result.getTx() : 0.0;
 
-		double tx = result.getTx(); // offset orizontal fata de target
+		// === LL_ONLY ===
+		if (turretMode == TurretAimMode.LL_ONLY) {
+			if (!hasTarget) {
+				robot.turret.getMotor().setPower(0);
+				return;
+			}
 
-		// --- HYSTERESIS LOGIC ---
-		if (turretAligned) {
-			if (Math.abs(tx) > TURRET_LL_DEADZONE_START) {
-				turretAligned = false;
+			// hysteresis on tx
+			if (turretAligned) {
+				if (Math.abs(txDeg) > LL_DEADZONE_START) turretAligned = false;
+				else { robot.turret.getMotor().setPower(0); return; }
 			} else {
-				robot.turret.setIntakeDirection(IntakeDirection.STOP);
-				return;
+				if (Math.abs(txDeg) < LL_DEADZONE_STOP) {
+					turretAligned = true;
+					robot.turret.getMotor().setPower(0);
+					return;
+				}
 			}
-		} else {
-			if (Math.abs(tx) < TURRET_LL_DEADZONE_STOP) {
-				turretAligned = true;
-				robot.turret.setIntakeDirection(IntakeDirection.STOP);
-				return;
-			}
+
+			double p = clamp(LL_KP_FAST * txDeg, -LL_MAX_FAST, LL_MAX_FAST);
+
+			// soft limits
+			if (p > 0 && ticks >= TURRET_MAX_TICKS) p = 0;
+			if (p < 0 && ticks <= TURRET_MIN_TICKS) p = 0;
+
+			robot.turret.getMotor().setPower(p);
+			return;
 		}
 
-		// --- MOVE TURRET ---
-		if (tx > 0) {
-			robot.turret.setIntakeDirection(IntakeDirection.SLOW_FORWARD);
-		} else if (tx <  0){
-			robot.turret.setIntakeDirection(IntakeDirection.SLOW_REVERSE);
+		// === ODO_LOCK (+ LL micro) ===
+		// Because turret has a small range, this mode works best if the driver keeps the robot roughly facing the target.
+		if (!odoLocked) {
+			lockHeadingRad = robot.drivetrain.pose.heading.log(); // radians
+			lockTurretTicks = ticks;
+			lastTargetTicks = ticks;
+			odoLocked = true;turretAligned = false;
+
+			prevHeadingRad = lockHeadingRad;
+			prevTimeSec = getRuntime();
 		}
+
+
+		double headingNow = robot.drivetrain.pose.heading.log();
+		double dHeading = wrapRad(headingNow - lockHeadingRad);
+
+// 1) calc target UNCLAMPED din odometrie
+		double unclamped = lockTurretTicks + dHeading * TURRET_TICKS_PER_RAD * ODO_GAIN;
+		int targetTicks = (int) Math.round(unclamped);
+
+// 2) micro-correction din Limelight (în ticks)
+		if (hasTarget && Math.abs(txDeg) > LL_MICRO_DEADZONE_DEG) {
+			int llNudge = (int) Math.round(txDeg * LL_TICKS_PER_DEG * LL_MICRO_GAIN);
+			targetTicks += llNudge;   // dacă corectează invers, schimbă în -=
+		}
+
+		if (hasTarget
+				&& Math.abs(txDeg) < RELOCK_TX_DEG
+				&& ticks > (TURRET_MIN_TICKS + RELOCK_MARGIN_TICKS)
+				&& ticks < (TURRET_MAX_TICKS - RELOCK_MARGIN_TICKS)) {
+
+			// Ținta e practic centrată -> actualizăm “adevărul” încet
+			lockTurretTicks = (int) Math.round((1.0 - RELOCK_ALPHA) * lockTurretTicks + RELOCK_ALPHA * ticks);
+			lockHeadingRad  = wrapRad(lockHeadingRad + RELOCK_ALPHA * wrapRad(headingNow - lockHeadingRad));
+		}
+
+// 3) CLAMP + ANTI-WINDUP (asta îți “salvează lock-ul” când lovești limita)
+		int clamped = clampInt(targetTicks, TURRET_MIN_TICKS, TURRET_MAX_TICKS);
+		boolean saturated = (clamped != targetTicks);
+		targetTicks = clamped;
+
+		if (saturated) {
+			// vrem să ajustăm lockHeadingRad astfel încât formula să dea fix limita
+			double dHeadingEff = (targetTicks - lockTurretTicks) / (TURRET_TICKS_PER_RAD * ODO_GAIN);
+			lockHeadingRad = headingNow - dHeadingEff;
+		}
+
+// 4) RATE LIMIT (anti-agresiv)
+		double now = getRuntime();
+		double dt = now - prevTimeSec;
+		if (dt < 1e-3) dt = 1e-3;
+
+		headingNow = robot.drivetrain.pose.heading.log();
+		double omega = wrapRad(headingNow - prevHeadingRad) / dt; // rad/s
+
+// rate limit dinamic: când omega e mare, permitem step mai mare
+		int dynamicMaxStep = (int) Math.round(8 + Math.abs(omega) * 25); // tune
+		dynamicMaxStep = clampInt(dynamicMaxStep, 8, 45);
+
+// aplicăm limiter-ul
+		int step = clampInt(targetTicks - lastTargetTicks, -dynamicMaxStep, dynamicMaxStep);
+		targetTicks = lastTargetTicks + step;
+		targetTicks = clampInt(targetTicks, TURRET_MIN_TICKS, TURRET_MAX_TICKS);
+		lastTargetTicks = targetTicks;
+
+// update pentru următorul loop
+		prevHeadingRad = headingNow;
+		prevTimeSec = now;
+
+
+		int err = targetTicks - ticks;
+		double pHold = clamp(HOLD_KP * err, -HOLD_MAX, HOLD_MAX);
+
+		// soft limits
+		if (pHold > 0 && ticks >= TURRET_MAX_TICKS) pHold = 0;
+		if (pHold < 0 && ticks <= TURRET_MIN_TICKS) pHold = 0;
+
+		robot.turret.getMotor().setPower(pHold);
+	}
+
+	private static double clamp(double v, double lo, double hi) {
+		return Math.max(lo, Math.min(hi, v));
+	}
+
+	private static int clampInt(int v, int lo, int hi) {
+		return Math.max(lo, Math.min(hi, v));
+	}
+
+	private static double wrapRad(double a) {
+		while (a > Math.PI) a -= 2.0 * Math.PI;
+		while (a < -Math.PI) a += 2.0 * Math.PI;
+		return a;
 	}
 
 
@@ -392,7 +545,9 @@ public final class decode extends BaseOpMode {
 
 		telemetry.addData("Auto Shooter Angle", autoShooterAngle ? "ON" : "OFF");
 		telemetry.addData("Last LL Distance", lastdistanceCm);
-		telemetry.addData("Turret Mode", auto_aim ? "AUTO" : "MANUAL");
+		telemetry.addData("TurretMode", turretMode);
+		telemetry.addData("OdoLocked", odoLocked);
+		telemetry.addData("TurretTicks", robot.turret.getMotor().getCurrentPosition());
 		telemetry.addData("Shooter Pos", shooterPosition);
 		telemetry.addData("Turret pos", robot.turret.getMotor().getCurrentPosition());
 	}

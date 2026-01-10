@@ -24,7 +24,9 @@ public class Auto_RED_Close_9 extends BaseOpMode {
 
 	// === TUNE THESE ===
 	private static final int AUTON_TURRET_TICKS = 20;      // tune this
-	private static final double AUTON_SHOOTER_POS = 0.67;  // tune this
+	private static final double AUTON_SHOOTER_POS = 0.71;  // tune this
+	private static final double AUTON_SHOOTER_POS_SECOND = 0.73;
+	private static final double AUTON_SHOOTER_POS_FINAL = 0.74;
 	private static final double TURRET_HOLD_POWER = 0.1;  // tune 0.05–0.20
 
 	@Override
@@ -371,6 +373,14 @@ public class Auto_RED_Close_9 extends BaseOpMode {
 			robot.turretTumbler.setPosition(AUTON_SHOOTER_POS);
 			return false;
 		};
+		Action setAutonShooterAngleSecond = packet -> {
+			robot.turretTumbler.setPosition(AUTON_SHOOTER_POS_SECOND);
+			return false;
+		};
+		Action setAutonShooterAngleFinal = packet -> {
+			robot.turretTumbler.setPosition(AUTON_SHOOTER_POS_FINAL);
+			return false;
+		};
 
 		// floor intake (for pickup path)
 		Action startIntake = packet -> {
@@ -387,15 +397,16 @@ public class Auto_RED_Close_9 extends BaseOpMode {
 
 		Actions.runBlocking(
 				RunSequentially(
+
 						goToShoot,
 						WaitFor(0.35),
 						newAimTurretLL(),
 						setAutonShooterAngle,
 
 						shooter_on,
-						WaitFor(0.8),
+						WaitFor(0.5),
 						shootArtifact,
-						WaitFor(1.8),
+						WaitFor(1.5),
 						shooter_off,
 
 						goToPickup,
@@ -407,11 +418,11 @@ public class Auto_RED_Close_9 extends BaseOpMode {
 						WaitFor(0.5),
 
 						newAimTurretLLFinal(),
-						setAutonShooterAngle,
+						setAutonShooterAngleSecond,
 						shooter_on,
 						WaitFor(0.5),
 						shootArtifact,
-						WaitFor(1.8),
+						WaitFor(1.5),
 						shooter_off,
 						stopShooting,
 
@@ -423,23 +434,18 @@ public class Auto_RED_Close_9 extends BaseOpMode {
 						WaitFor(0.35),
 						stopIntake,
 						pickup2L_to_Shoot,
-						WaitFor(0.3),
-
+						WaitFor(0.25),
 
 						newAimTurretLL(),
+						setAutonShooterAngleFinal,
 						WaitFor(0.3),
 						shooter_on,
-						WaitFor(0.6),
+						WaitFor(0.5),
 						shootArtifact,
-						WaitFor(1.8),
+						WaitFor(1.5),
 						shooter_off,
-						finishline,
-						WaitFor(1.0)
-
-
-
-
-
+						stopShooting,
+						finishline
 				)
 		);
 	}

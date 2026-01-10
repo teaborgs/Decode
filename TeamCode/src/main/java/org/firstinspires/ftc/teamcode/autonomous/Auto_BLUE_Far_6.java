@@ -14,6 +14,7 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import org.firstinspires.ftc.teamcode.BaseOpMode;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.autonomous.waypoints.WAYPOINTS_BLUE_FAR;
+import org.firstinspires.ftc.teamcode.autonomous.waypoints.WAYPOINTS_RED_CLOSE;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
@@ -23,7 +24,7 @@ public class Auto_BLUE_Far_6 extends BaseOpMode {
 
 	// === TUNE THESE ===
 	private static final int AUTON_TURRET_TICKS = 20;      // tune this
-	private static final double AUTON_SHOOTER_POS = 0.75;  // tune this
+	private static final double AUTON_SHOOTER_POS = 0.82;  // tune this
 	private static final double TURRET_HOLD_POWER = 0.1;  // tune 0.05–0.20
 
 	@Override
@@ -70,10 +71,10 @@ public class Auto_BLUE_Far_6 extends BaseOpMode {
 		return new AimTurretWithLimelightAction(
 				this,
 				robot,
-				0.045,   // kP
-				0.12,    // minPower
-				0.40,    // maxPower
-				0.45,     // lockThreshold degrees
+				0.035,   // kP
+				0.7,    // minPower
+				0.35,    // maxPower
+				0.30,     // lockThreshold degrees
 				750,    // timeout ms
 				+1.0,    // directionSign (keep as sign; tune kP instead)
 				TURRET_HOLD_POWER
@@ -85,12 +86,12 @@ public class Auto_BLUE_Far_6 extends BaseOpMode {
 		return new AimTurretWithLimelightAction(
 				this,
 				robot,
-				0.055,   // kP (a bit stronger)
-				0.12,    // minPower
-				0.45,    // maxPower (a bit higher)
-				0.70,    // lockThreshold degrees (more forgiving)
-				750,    // timeout ms (more time to reacquire)
-				+1.0,    // directionSign
+				0.035,   // kP
+				0.7,    // minPower
+				0.35,    // maxPower
+				0.30,     // lockThreshold degrees
+				750,    // timeout ms
+				+1.0,    // directionSign (keep as sign; tune kP instead)
 				TURRET_HOLD_POWER
 		);
 	}
@@ -244,9 +245,12 @@ public class Auto_BLUE_Far_6 extends BaseOpMode {
 				.lineToX(WAYPOINTS_BLUE_FAR.PICKUPF.position.x)
 				.build();
 
-		Action backToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUPF)
-				.setTangent(Math.toRadians(90))
-				.lineToY(WAYPOINTS_BLUE_FAR.SHOOT.position.y)
+		double tan = WAYPOINTS_BLUE_FAR.SHOOT.heading.toDouble();
+		Action backToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUPL)
+				.splineToConstantHeading(
+						new Vector2d(WAYPOINTS_BLUE_FAR.SHOOT.position.x, WAYPOINTS_BLUE_FAR.SHOOT.position.y),
+						tan
+				)
 				.build();
 
 		// ending location
@@ -337,20 +341,18 @@ public class Auto_BLUE_Far_6 extends BaseOpMode {
 
 						// BALL 1
 						shootArtifact,
-						WaitFor(0.27),
+						WaitFor(0.2),
 						stopShooting,
 						WaitFor(1.2),
 
 						// BALL 2
-						newAimTurretLL(),
 						shootArtifact,
-						WaitFor(0.30),
+						WaitFor(0.28),
 						stopShooting,
 						WaitFor(1.2),
 
 						// BALL 3
-						newAimTurretLL(),
-						setAutonShooterAngle,
+
 						shootArtifact,
 						WaitFor(0.55),
 						stopShooting,
@@ -375,11 +377,9 @@ public class Auto_BLUE_Far_6 extends BaseOpMode {
 						stopIntake,
 						WaitFor(0.4),
 
-						// return (you had goToPickup again; leaving as-is)
-						backToPickup,
-						WaitFor(0.2),
+
 						backToShoot,
-						WaitFor(0.3),
+						WaitFor(0.35),
 
 						// Aim + tilt
 						newAimTurretLLFinal(),
@@ -396,16 +396,12 @@ public class Auto_BLUE_Far_6 extends BaseOpMode {
 						WaitFor(1.3),
 
 						// BALL 2
-						newAimTurretLLFinal(),
-						setAutonShooterAngle,
 						shootArtifact,
 						WaitFor(0.25),
 						stopShooting,
 						WaitFor(1.2),
 
 						// BALL 3
-						newAimTurretLLFinal(),
-						setAutonShooterAngle,
 						shootArtifact,
 						WaitFor(0.5),
 						stopShooting,
