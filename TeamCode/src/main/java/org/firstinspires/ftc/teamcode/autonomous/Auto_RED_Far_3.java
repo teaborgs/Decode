@@ -18,8 +18,8 @@ import org.firstinspires.ftc.teamcode.autonomous.waypoints.WAYPOINTS_RED_FAR;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@Autonomous(name = "Autonom_RED_Far6", group = "Auto")
-public class Auto_RED_Far_6 extends BaseOpMode {
+@Autonomous(name = "Autonom_RED_Far3", group = "Auto")
+public class Auto_RED_Far_3 extends BaseOpMode {
 	private RobotHardware robot;
 
 	// === TUNE THESE ===
@@ -98,7 +98,7 @@ public class Auto_RED_Far_6 extends BaseOpMode {
 	}
 
 	private static class AimTurretWithLimelightAction implements Action {
-		private final Auto_RED_Far_6 op;      // to access turretHoldCurrent()
+		private final Auto_RED_Far_3 op;      // to access turretHoldCurrent()
 		private final RobotHardware robot;
 
 		private final double kP;
@@ -113,7 +113,7 @@ public class Auto_RED_Far_6 extends BaseOpMode {
 		private long startTimeMs = 0;
 
 		AimTurretWithLimelightAction(
-				Auto_RED_Far_6 op,
+				Auto_RED_Far_3 op,
 				RobotHardware robot,
 				double kP,
 				double minPower,
@@ -237,6 +237,16 @@ public class Auto_RED_Far_6 extends BaseOpMode {
 		Action goToPickupL = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.PICKUP)
 				.setTangent(Math.toRadians(0))
 				.lineToX(WAYPOINTS_RED_FAR.PICKUPL.position.x)
+				.build();
+
+		Action HumanPark = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.START)
+				.setTangent(Math.toRadians(0))
+				.lineToX(WAYPOINTS_RED_FAR.HUMAN.position.x)
+				.build();
+
+		Action backToStart = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.SHOOT)
+				.setTangent(Math.toRadians(90))
+				.lineToY(WAYPOINTS_RED_FAR.START.position.y)
 				.build();
 
 		// BACK TO SHOOT
@@ -363,57 +373,11 @@ public class Auto_RED_Far_6 extends BaseOpMode {
 
 						stopShooting,
 						shooter_off,
-
-						// pickup
-						goToPickupF,
 						WaitFor(0.2),
 
-						goToPickup,
-						WaitFor(0.1),
+						backToStart,
+						HumanPark
 
-						startIntake,
-						WaitFor(0.1),
-
-						goToPickupL,
-						WaitFor(0.6),
-
-						stopIntake,
-						WaitFor(0.4),
-
-
-						backToShoot,
-						WaitFor(0.35),
-
-						// Aim + tilt
-						newAimTurretLLFinal(),
-						setAutonShooterAngle,
-						WaitFor(0.5),
-
-						shooter_on,
-						WaitFor(1.0),
-
-						// BALL 1
-						shootArtifact,
-						WaitFor(0.27),
-						stopShooting,
-						WaitFor(1.3),
-
-						// BALL 2
-						shootArtifact,
-						WaitFor(0.25),
-						stopShooting,
-						WaitFor(1.2),
-
-						// BALL 3
-						shootArtifact,
-						WaitFor(0.5),
-						stopShooting,
-						WaitFor(0.4),
-
-						stopShooting,
-						shooter_off,
-
-						finishLine
 				)
 		);
 	}
