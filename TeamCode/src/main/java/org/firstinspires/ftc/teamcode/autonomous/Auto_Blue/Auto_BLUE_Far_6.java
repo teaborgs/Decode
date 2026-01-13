@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.autonomous;
+package org.firstinspires.ftc.teamcode.autonomous.Auto_Blue;
 
 import static org.firstinspires.ftc.teamcode.Utilities.RunSequentially;
 import static org.firstinspires.ftc.teamcode.Utilities.WaitFor;
@@ -14,25 +14,23 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import org.firstinspires.ftc.teamcode.BaseOpMode;
 import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.autonomous.waypoints.WAYPOINTS_BLUE_FAR;
-import org.firstinspires.ftc.teamcode.autonomous.waypoints.WAYPOINTS_RED_FAR;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@Autonomous(name = "Autonom_RED_Far6", group = "Auto")
-public class Auto_RED_Far_6 extends BaseOpMode {
+@Autonomous(name = "Autonom_Blue_Far6", group = "Auto")
+public class Auto_BLUE_Far_6 extends BaseOpMode {
 	private RobotHardware robot;
 
 	// === TUNE THESE ===
 	private static final int AUTON_TURRET_TICKS = 20;      // tune this
 	private static final double AUTON_SHOOTER_POS = 0.75;  // tune this
 	private static final double TURRET_HOLD_POWER = 0.1;  // tune 0.05–0.20
-	//private static final double TX_OFFSET_DEG = 5; // începe cu 0.5–1.0
 
 	@Override
 	protected void OnInitialize() {
 		robot = new RobotHardware(hardwareMap);
 		robot.init();
-		robot.limelight.pipelineSwitch(1);
+		robot.limelight.pipelineSwitch(0);
 
 		// Zero turret encoder at known starting angle
 		DcMotorEx turretMotor = robot.turret.getMotor();
@@ -73,7 +71,7 @@ public class Auto_RED_Far_6 extends BaseOpMode {
 				this,
 				robot,
 				0.035,   // kP
-				0.07,    // minPower
+				0.7,    // minPower
 				0.35,    // maxPower
 				0.30,     // lockThreshold degrees
 				750,    // timeout ms
@@ -88,7 +86,7 @@ public class Auto_RED_Far_6 extends BaseOpMode {
 				this,
 				robot,
 				0.035,   // kP
-				0.07,    // minPower
+				0.7,    // minPower
 				0.35,    // maxPower
 				0.30,     // lockThreshold degrees
 				750,    // timeout ms
@@ -98,7 +96,7 @@ public class Auto_RED_Far_6 extends BaseOpMode {
 	}
 
 	private static class AimTurretWithLimelightAction implements Action {
-		private final Auto_RED_Far_6 op;      // to access turretHoldCurrent()
+		private final Auto_BLUE_Far_6 op;      // to access turretHoldCurrent()
 		private final RobotHardware robot;
 
 		private final double kP;
@@ -113,7 +111,7 @@ public class Auto_RED_Far_6 extends BaseOpMode {
 		private long startTimeMs = 0;
 
 		AimTurretWithLimelightAction(
-				Auto_RED_Far_6 op,
+				Auto_BLUE_Far_6 op,
 				RobotHardware robot,
 				double kP,
 				double minPower,
@@ -177,7 +175,8 @@ public class Auto_RED_Far_6 extends BaseOpMode {
 				packet.put("LL Aim", "NO TARGET");
 				return true;
 			}
-			double tx = result.getTx();
+
+			double tx = result.getTx(); // deg
 			double absTx = Math.abs(tx);
 
 			packet.put("LL tx", tx);
@@ -218,49 +217,46 @@ public class Auto_RED_Far_6 extends BaseOpMode {
 		/// === PATH ACTIONS ===
 
 		// START -> SHOOT
-		Action goToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.START)
-				.setTangent(Math.toRadians(90))
-				.lineToY(WAYPOINTS_RED_FAR.SHOOT.position.y)
+		Action goToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.START)
+				.setTangent(Math.toRadians(-90))
+				.lineToY(WAYPOINTS_BLUE_FAR.SHOOT.position.y)
 				.build();
 
 		// SHOOT -> PICKUP
-		Action goToPickupF = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.SHOOT)
-				.setTangent(Math.toRadians(90))
-				.lineToY(WAYPOINTS_RED_FAR.PICKUPF.position.y)
+		Action goToPickupF = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.SHOOT)
+				.setTangent(Math.toRadians(-90))
+				.lineToY(WAYPOINTS_BLUE_FAR.PICKUPF.position.y)
 				.build();
 
-		Action goToPickup = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.PICKUPF)
+		Action goToPickup = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUPF)
 				.setTangent(Math.toRadians(0))
-				.lineToX(WAYPOINTS_RED_FAR.PICKUP.position.x)
+				.lineToX(WAYPOINTS_BLUE_FAR.PICKUP.position.x)
 				.build();
 
-		Action goToPickupL = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.PICKUP)
+		Action goToPickupL = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUP)
 				.setTangent(Math.toRadians(0))
-				.lineToX(WAYPOINTS_RED_FAR.PICKUPL.position.x)
+				.lineToX(WAYPOINTS_BLUE_FAR.PICKUPL.position.x)
 				.build();
 
 		// BACK TO SHOOT
-		Vector2d from = WAYPOINTS_RED_FAR.PICKUPL.position;
-		Vector2d to   = WAYPOINTS_RED_FAR.SHOOT.position;
-		double dir = Math.atan2(to.y - from.y, to.x - from.x);
-
-		Action backToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.PICKUPL)
-				.setTangent(dir)  // IMPORTANT: cum pleacă
-				.splineToConstantHeading(new Vector2d(to.x, to.y), dir) // cum ajunge
-				.build();
-
-
-		Action backToPickup = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.PICKUPL)
+		Action backToPickup = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUPL)
 				.setTangent(Math.toRadians(180))
-				.lineToX(WAYPOINTS_RED_FAR.PICKUPF.position.x)
+				.lineToX(WAYPOINTS_BLUE_FAR.PICKUPF.position.x)
 				.build();
 
+		double tan = WAYPOINTS_BLUE_FAR.SHOOT.heading.toDouble();
+		Action backToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUPL)
+				.splineToConstantHeading(
+						new Vector2d(WAYPOINTS_BLUE_FAR.SHOOT.position.x, WAYPOINTS_BLUE_FAR.SHOOT.position.y),
+						tan
+				)
+				.build();
 
 		// ending location
-		Action finishLine = robot.drivetrain.actionBuilder((WAYPOINTS_RED_FAR.SHOOT))
+		Action finishLine = robot.drivetrain.actionBuilder((WAYPOINTS_BLUE_FAR.SHOOT))
 				.splineTo(
-						new Vector2d(WAYPOINTS_RED_FAR.PARK.position.x, WAYPOINTS_RED_FAR.PARK.position.y),
-						WAYPOINTS_RED_FAR.PARK.heading.toDouble()
+						new Vector2d(WAYPOINTS_BLUE_FAR.PARK.position.x, WAYPOINTS_BLUE_FAR.PARK.position.y),
+						WAYPOINTS_BLUE_FAR.PARK.heading.toDouble()
 				)
 				.build();
 

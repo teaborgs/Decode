@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.autonomous;
+package org.firstinspires.ftc.teamcode.autonomous.Auto_Red;
 
 import static org.firstinspires.ftc.teamcode.Utilities.RunSequentially;
 import static org.firstinspires.ftc.teamcode.Utilities.WaitFor;
@@ -13,28 +13,26 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import org.firstinspires.ftc.teamcode.BaseOpMode;
 import org.firstinspires.ftc.teamcode.RobotHardware;
-import org.firstinspires.ftc.teamcode.autonomous.waypoints.WAYPOINTS_BLUE_CLOSE;
-import org.firstinspires.ftc.teamcode.autonomous.waypoints.WAYPOINTS_BLUE_FAR;
 import org.firstinspires.ftc.teamcode.autonomous.waypoints.WAYPOINTS_RED_CLOSE;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@Autonomous(name = "Autonom_Blue_Close9", group = "Auto")
-public class Auto_BLUE_Close_9 extends BaseOpMode {
+@Autonomous(name = "Autonom_Red_Close9", group = "Auto")
+public class Auto_RED_Close_9 extends BaseOpMode {
 	private RobotHardware robot;
 
 	// === TUNE THESE ===
 	private static final int AUTON_TURRET_TICKS = 20;      // tune this
-	private static final double AUTON_SHOOTER_POS = 0.7;  // tune this
-	private static final double AUTON_SHOOTER_POS_SECOND = 0.72;
-	private static final double AUTON_SHOOTER_POS_FINAL = 0.73;
+	private static final double AUTON_SHOOTER_POS = 0.71;  // tune this
+	private static final double AUTON_SHOOTER_POS_SECOND = 0.73;
+	private static final double AUTON_SHOOTER_POS_FINAL = 0.74;
 	private static final double TURRET_HOLD_POWER = 0.1;  // tune 0.05–0.20
 
 	@Override
 	protected void OnInitialize() {
 		robot = new RobotHardware(hardwareMap);
 		robot.init();
-		robot.limelight.pipelineSwitch(0);
+		robot.limelight.pipelineSwitch(1);
 
 		// Zero turret encoder at known starting angle
 		DcMotorEx turretMotor = robot.turret.getMotor();
@@ -78,20 +76,6 @@ public class Auto_BLUE_Close_9 extends BaseOpMode {
 				0.12,    // minPower
 				0.40,    // maxPower
 				0.45,     // lockThreshold degrees
-				2500,    // timeout ms
-				+1.0,    // directionSign (keep as sign; tune kP instead)
-				TURRET_HOLD_POWER
-		);
-	}
-
-	private Action thirdAimTurretLL() {
-		return new AimTurretWithLimelightAction(
-				this,
-				robot,
-				0.045,   // kP
-				0.12,    // minPower
-				0.40,    // maxPower
-				0.45,     // lockThreshold degrees
 				750,    // timeout ms
 				+1.0,    // directionSign (keep as sign; tune kP instead)
 				TURRET_HOLD_POWER
@@ -114,7 +98,7 @@ public class Auto_BLUE_Close_9 extends BaseOpMode {
 	}
 
 	private static class AimTurretWithLimelightAction implements Action {
-		private final Auto_BLUE_Close_9 op;      // to access turretHoldCurrent()
+		private final Auto_RED_Close_9 op;      // to access turretHoldCurrent()
 		private final RobotHardware robot;
 
 		private final double kP;
@@ -129,7 +113,7 @@ public class Auto_BLUE_Close_9 extends BaseOpMode {
 		private long startTimeMs = 0;
 
 		AimTurretWithLimelightAction(
-				Auto_BLUE_Close_9 op,
+				Auto_RED_Close_9 op,
 				RobotHardware robot,
 				double kP,
 				double minPower,
@@ -236,28 +220,28 @@ public class Auto_BLUE_Close_9 extends BaseOpMode {
 
 		// START -> SHOOT
 
-		Action goToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_CLOSE.START)
+		Action goToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE.START)
 				.splineTo(
-						new Vector2d(WAYPOINTS_BLUE_CLOSE.SHOOT.position.x, WAYPOINTS_BLUE_CLOSE.SHOOT.position.y),
-						WAYPOINTS_BLUE_CLOSE.SHOOT.heading.toDouble()
+						new Vector2d(WAYPOINTS_RED_CLOSE.SHOOT.position.x, WAYPOINTS_RED_CLOSE.SHOOT.position.y),
+						WAYPOINTS_RED_CLOSE.SHOOT.heading.toDouble()
+				)
+				.build();
+
+		Action finishline = robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE.SHOOT)
+				.splineTo(
+						new Vector2d(WAYPOINTS_RED_CLOSE.FINISHLINE.position.x, WAYPOINTS_RED_CLOSE.FINISHLINE.position.y),
+						WAYPOINTS_RED_CLOSE.FINISHLINE.heading.toDouble()
 				)
 				.build();
 
 
 		//PICKUP PATH
-		double tan = WAYPOINTS_BLUE_CLOSE.SHOOT.heading.toDouble(); // -142° în rad
-		Action goToPickup = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_CLOSE.SHOOT)
+		double tan = WAYPOINTS_RED_CLOSE.SHOOT.heading.toDouble(); // -142° în rad
+		Action goToPickup = robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE.SHOOT)
 				.setTangent(tan)
 				.splineToConstantHeading(
-						new Vector2d(WAYPOINTS_BLUE_CLOSE.PICKUPL1.position.x, WAYPOINTS_BLUE_CLOSE.PICKUPL1.position.y),
+						new Vector2d(WAYPOINTS_RED_CLOSE.PICKUPL1.position.x, WAYPOINTS_RED_CLOSE.PICKUPL1.position.y),
 						tan
-				)
-				.build();
-
-		Action finishline = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_CLOSE.SHOOT)
-				.splineTo(
-						new Vector2d(WAYPOINTS_BLUE_CLOSE.FINISHLINE.position.x, WAYPOINTS_BLUE_CLOSE.FINISHLINE.position.y),
-						WAYPOINTS_BLUE_CLOSE.FINISHLINE.heading.toDouble()
 				)
 				.build();
 
@@ -266,25 +250,25 @@ public class Auto_BLUE_Close_9 extends BaseOpMode {
 
 		double tanBack = tan + Math.PI;
 
-		Action backToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_CLOSE.PICKUPL1)
+		Action backToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE.PICKUPL1)
 				.setTangent(tanBack)
 				.splineToConstantHeading(
-						new Vector2d(WAYPOINTS_BLUE_CLOSE.SHOOT.position.x, WAYPOINTS_BLUE_CLOSE.SHOOT.position.y),
+						new Vector2d(WAYPOINTS_RED_CLOSE.SHOOT.position.x, WAYPOINTS_RED_CLOSE.SHOOT.position.y),
 						tanBack
 				)
 				.build();
 
 		//PICKUP2
 
-		double heading = WAYPOINTS_BLUE_CLOSE.SHOOT.heading.toDouble(); // -142°
+		double heading = WAYPOINTS_RED_CLOSE.SHOOT.heading.toDouble(); // -142°
 
 		double tanLeft = heading + Math.toRadians(90);
 
 		Action goToPickup2 =
-				robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_CLOSE.SHOOT)
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE.SHOOT)
 						.setTangent(tanLeft)
 						.splineToConstantHeading(
-								WAYPOINTS_BLUE_CLOSE.PICKUP2.position,
+								WAYPOINTS_RED_CLOSE.PICKUP2.position,
 								heading
 						)
 						.build();
@@ -292,10 +276,10 @@ public class Auto_BLUE_Close_9 extends BaseOpMode {
 		double tanForward = heading;
 
 		Action goToPickup2F =
-				robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_CLOSE.PICKUP2)
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE.PICKUP2)
 						.setTangent(tanForward)
 						.splineToConstantHeading(
-								WAYPOINTS_BLUE_CLOSE.PICKUP2L.position,
+								WAYPOINTS_RED_CLOSE.PICKUP2L.position,
 								heading
 						)
 						.build();
@@ -303,10 +287,10 @@ public class Auto_BLUE_Close_9 extends BaseOpMode {
 		double tanBack2 = heading + Math.toRadians(180);
 
 		Action backToPickup2 =
-				robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_CLOSE.PICKUP2L)
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE.PICKUP2L)
 						.setTangent(tanBack2)
 						.splineToConstantHeading(
-								WAYPOINTS_BLUE_CLOSE.PICKUP2.position,
+								WAYPOINTS_RED_CLOSE.PICKUP2.position,
 								heading
 						)
 						.build();
@@ -314,24 +298,26 @@ public class Auto_BLUE_Close_9 extends BaseOpMode {
 		double tanRight = heading - Math.toRadians(90);
 
 		Action backToShoot2 =
-				robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_CLOSE.PICKUP2L)
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE.PICKUP2L)
 						.setTangent(tanRight)
 						.splineToConstantHeading(
-								WAYPOINTS_BLUE_CLOSE.SHOOT.position,
+								WAYPOINTS_RED_CLOSE.SHOOT.position,
 								heading
 						)
 						.build();
 
-		double headingback = WAYPOINTS_BLUE_CLOSE.SHOOT.heading.toDouble();
+		double headingback = WAYPOINTS_RED_CLOSE.SHOOT.heading.toDouble();
 
 		Action pickup2L_to_Shoot =
-				robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_CLOSE.PICKUP2L)
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE.PICKUP2L)
 						.setTangent(headingback) // pleacă drept înainte în direcția heading-ului
 						.splineToConstantHeading(
-								WAYPOINTS_BLUE_CLOSE.SHOOT.position,
-								headingback
+								WAYPOINTS_RED_CLOSE.SHOOT.position,
+								heading
 						)
 						.build();
+
+
 
 
 
@@ -386,12 +372,10 @@ public class Auto_BLUE_Close_9 extends BaseOpMode {
 			robot.turretTumbler.setPosition(AUTON_SHOOTER_POS);
 			return false;
 		};
-
 		Action setAutonShooterAngleSecond = packet -> {
 			robot.turretTumbler.setPosition(AUTON_SHOOTER_POS_SECOND);
 			return false;
 		};
-
 		Action setAutonShooterAngleFinal = packet -> {
 			robot.turretTumbler.setPosition(AUTON_SHOOTER_POS_FINAL);
 			return false;
@@ -412,6 +396,7 @@ public class Auto_BLUE_Close_9 extends BaseOpMode {
 
 		Actions.runBlocking(
 				RunSequentially(
+
 						goToShoot,
 						WaitFor(0.35),
 						newAimTurretLL(),
