@@ -1,5 +1,6 @@
-package org.firstinspires.ftc.teamcode.autonomous.Auto_Blue;
+package org.firstinspires.ftc.teamcode.autonomous.Auto_Red;
 
+import static org.firstinspires.ftc.teamcode.Utilities.RunInParallel;
 import static org.firstinspires.ftc.teamcode.Utilities.RunSequentially;
 import static org.firstinspires.ftc.teamcode.Utilities.WaitFor;
 
@@ -13,26 +14,32 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import org.firstinspires.ftc.teamcode.BaseOpMode;
 import org.firstinspires.ftc.teamcode.RobotHardware;
-import org.firstinspires.ftc.teamcode.autonomous.waypoints.WAYPOINTS_BLUE_FAR;
+import org.firstinspires.ftc.teamcode.autonomous.waypoints.WAYPOINTS_RED_CLOSE_EXP;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@Autonomous(name = "Autonom_Blue_Far6", group = "Auto")
-public class Auto_BLUE_Far_6 extends BaseOpMode {
+@Autonomous(name = "Autonom_Red_Close_Exp", group = "Auto")
+public class Auto_RED_Close_Exp extends BaseOpMode {
 	private RobotHardware robot;
 
 	// === TUNE THESE ===
 	private static final int AUTON_TURRET_TICKS = 20;      // tune this
 	private static final double AUTON_SHOOTER_POS = 0.75;  // tune this
+	private static final double AUTON_SHOOTER_POS_SECOND = 0.77;
+	private static final double AUTON_SHOOTER_POS_THIRD = 0.76;
+	private static final double AUTON_SHOOTER_POS_FINAL = 0.74;
 	private static final double TURRET_HOLD_POWER = 0.1;  // tune 0.05–0.20
+	private static final double SHOOT_SAFE_IN = 8.0;
+
 
 	@Override
 	protected void OnInitialize() {
 		robot = new RobotHardware(hardwareMap);
 		robot.init();
-		robot.limelight.pipelineSwitch(0);
+		robot.limelight.pipelineSwitch(1);
 
 		// Zero turret encoder at known starting angle
+
 		DcMotorEx turretMotor = robot.turret.getMotor();
 		turretMotor.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
 		turretMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
@@ -70,10 +77,24 @@ public class Auto_BLUE_Far_6 extends BaseOpMode {
 		return new AimTurretWithLimelightAction(
 				this,
 				robot,
-				0.035,   // kP
-				0.7,    // minPower
-				0.35,    // maxPower
-				0.30,     // lockThreshold degrees
+				0.045,   // kP
+				0.12,    // minPower
+				0.40,    // maxPower
+				0.45,     // lockThreshold degrees
+				750,    // timeout ms
+				+1.0,    // directionSign (keep as sign; tune kP instead)
+				TURRET_HOLD_POWER
+		);
+	}
+
+	private Action newAimTurretLLSecond() {
+		return new AimTurretWithLimelightAction(
+				this,
+				robot,
+				0.045,   // kP
+				0.12,    // minPower
+				0.40,    // maxPower
+				0.45,     // lockThreshold degrees
 				750,    // timeout ms
 				+1.0,    // directionSign (keep as sign; tune kP instead)
 				TURRET_HOLD_POWER
@@ -85,18 +106,18 @@ public class Auto_BLUE_Far_6 extends BaseOpMode {
 		return new AimTurretWithLimelightAction(
 				this,
 				robot,
-				0.035,   // kP
-				0.7,    // minPower
-				0.35,    // maxPower
-				0.30,     // lockThreshold degrees
-				750,    // timeout ms
-				+1.0,    // directionSign (keep as sign; tune kP instead)
+				0.055,   // kP (a bit stronger)
+				0.12,    // minPower
+				0.45,    // maxPower (a bit higher)
+				0.70,    // lockThreshold degrees (more forgiving)
+				750,    // timeout ms (more time to reacquire)
+				+1.0,    // directionSign
 				TURRET_HOLD_POWER
 		);
 	}
 
 	private static class AimTurretWithLimelightAction implements Action {
-		private final Auto_BLUE_Far_6 op;      // to access turretHoldCurrent()
+		private final Auto_RED_Close_Exp op;      // to access turretHoldCurrent()
 		private final RobotHardware robot;
 
 		private final double kP;
@@ -111,7 +132,7 @@ public class Auto_BLUE_Far_6 extends BaseOpMode {
 		private long startTimeMs = 0;
 
 		AimTurretWithLimelightAction(
-				Auto_BLUE_Far_6 op,
+				Auto_RED_Close_Exp op,
 				RobotHardware robot,
 				double kP,
 				double minPower,
@@ -216,49 +237,154 @@ public class Auto_BLUE_Far_6 extends BaseOpMode {
 
 		/// === PATH ACTIONS ===
 
+		// SHOOT -> PICKUP2 (left strafe-ish)
+		Action startToShootBack =
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.START)
+						.strafeTo(
+								new Vector2d(
+										WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.x,
+										WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.y
+								)
+						)
+						.build();
+
+		Action shootToPickup1 =
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.SHOOT)
+						.strafeTo(
+								new Vector2d(
+										WAYPOINTS_RED_CLOSE_EXP.PICKUP1.position.x,
+										WAYPOINTS_RED_CLOSE_EXP.PICKUP1.position.y
+								)
+						)
+						.build();
+
+		Action pickup1ToShoot =
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.PICKUP1)
+						.strafeTo(
+								new Vector2d(
+										WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.x + SHOOT_SAFE_IN,
+										WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.y
+								)
+						)
+						.build();
+
+		Action shootToPickup2S =
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.SHOOT)
+						.strafeTo(
+								new Vector2d(
+										WAYPOINTS_RED_CLOSE_EXP.PICKUP2S.position.x,
+										WAYPOINTS_RED_CLOSE_EXP.PICKUP2S.position.y
+								)
+						)
+						.build();
+
+		Action pickup2SToPickup2 =
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.PICKUP2S)
+						.strafeTo(
+								new Vector2d(
+										WAYPOINTS_RED_CLOSE_EXP.PICKUP2.position.x,
+										WAYPOINTS_RED_CLOSE_EXP.PICKUP2.position.y
+								)
+						)
+						.build();
+
+		Action pickup2ToPickup2S =
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.PICKUP2)
+						.strafeTo(
+								new Vector2d(
+										WAYPOINTS_RED_CLOSE_EXP.PICKUP2S.position.x,
+										WAYPOINTS_RED_CLOSE_EXP.PICKUP2S.position.y
+								)
+						)
+						.build();
+
+		Action pickup2ToShoot =
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.PICKUP2)
+						.strafeTo(
+								new Vector2d(
+										WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.x + SHOOT_SAFE_IN,
+										WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.y
+								)
+						)
+						.build();
+
+		Action shootTopickup3S =
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.SHOOT)
+						.strafeTo(
+								new Vector2d(
+										WAYPOINTS_RED_CLOSE_EXP.PICKUP3S.position.x,
+										WAYPOINTS_RED_CLOSE_EXP.PICKUP3S.position.y
+								)
+						)
+						.build();
+		Action pickup3SToPickup3 =
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.PICKUP3S)
+						.strafeTo(
+								new Vector2d(
+										WAYPOINTS_RED_CLOSE_EXP.PICKUP3.position.x,
+										WAYPOINTS_RED_CLOSE_EXP.PICKUP3.position.y
+								)
+						)
+						.build();
+
+		Action pickup3ToShoot =
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.PICKUP3)
+						.strafeTo(
+								new Vector2d(
+										WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.x + SHOOT_SAFE_IN,
+										WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.y
+								)
+						)
+						.build();
+
+		Action pickupToOpengateS =
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.PICKUP1)
+						.strafeTo(
+								new Vector2d(
+										WAYPOINTS_RED_CLOSE_EXP.OPENGATES.position.x,
+										WAYPOINTS_RED_CLOSE_EXP.OPENGATES.position.y
+								)
+						)
+						.build();
+
+		Action opengateSToOpengate =
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.OPENGATES)
+						.strafeTo(
+								new Vector2d(
+										WAYPOINTS_RED_CLOSE_EXP.OPENGATE.position.x,
+										WAYPOINTS_RED_CLOSE_EXP.OPENGATE.position.y
+								)
+						)
+						.build();
+
+		Action opengateToShoot =
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.OPENGATE)
+						.strafeTo(
+								new Vector2d(
+										WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.x,
+										WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.y
+								)
+						)
+						.build();
+
+		Action finishline =
+				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.SHOOT)
+						.strafeTo(
+								new Vector2d(
+										WAYPOINTS_RED_CLOSE_EXP.OPENGATES.position.x - SHOOT_SAFE_IN,
+										WAYPOINTS_RED_CLOSE_EXP.OPENGATES.position.y
+								)
+						)
+						.build();
+
+
+
+
+
+
+
+
 		// START -> SHOOT
-		Action goToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.START)
-				.setTangent(Math.toRadians(-90))
-				.lineToY(WAYPOINTS_BLUE_FAR.SHOOT.position.y)
-				.build();
-
-		// SHOOT -> PICKUP
-		Action goToPickupF = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.SHOOT)
-				.setTangent(Math.toRadians(-90))
-				.lineToY(WAYPOINTS_BLUE_FAR.PICKUPF.position.y)
-				.build();
-
-		Action goToPickup = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUPF)
-				.setTangent(Math.toRadians(0))
-				.lineToX(WAYPOINTS_BLUE_FAR.PICKUP.position.x)
-				.build();
-
-		Action goToPickupL = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUP)
-				.setTangent(Math.toRadians(0))
-				.lineToX(WAYPOINTS_BLUE_FAR.PICKUPL.position.x)
-				.build();
-
-		// BACK TO SHOOT
-		Action backToPickup = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUPL)
-				.setTangent(Math.toRadians(180))
-				.lineToX(WAYPOINTS_BLUE_FAR.PICKUPF.position.x)
-				.build();
-
-		double tan = WAYPOINTS_BLUE_FAR.SHOOT.heading.toDouble();
-		Action backToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUPL)
-				.splineToConstantHeading(
-						new Vector2d(WAYPOINTS_BLUE_FAR.SHOOT.position.x, WAYPOINTS_BLUE_FAR.SHOOT.position.y),
-						tan
-				)
-				.build();
-
-		// ending location
-		Action finishLine = robot.drivetrain.actionBuilder((WAYPOINTS_BLUE_FAR.SHOOT))
-				.splineTo(
-						new Vector2d(WAYPOINTS_BLUE_FAR.PARK.position.x, WAYPOINTS_BLUE_FAR.PARK.position.y),
-						WAYPOINTS_BLUE_FAR.PARK.heading.toDouble()
-				)
-				.build();
 
 		/// === SHOOTER AND INTAKE ACTIONS ===
 
@@ -311,6 +437,18 @@ public class Auto_BLUE_Far_6 extends BaseOpMode {
 			robot.turretTumbler.setPosition(AUTON_SHOOTER_POS);
 			return false;
 		};
+		Action setAutonShooterAngleSecond = packet -> {
+			robot.turretTumbler.setPosition(AUTON_SHOOTER_POS_SECOND);
+			return false;
+		};
+		Action setAutonShooterAngleThird = packet -> {
+			robot.turretTumbler.setPosition(AUTON_SHOOTER_POS_THIRD);
+			return false;
+		};
+		Action setAutonShooterAngleFinal = packet -> {
+			robot.turretTumbler.setPosition(AUTON_SHOOTER_POS_FINAL);
+			return false;
+		};
 
 		// floor intake (for pickup path)
 		Action startIntake = packet -> {
@@ -323,94 +461,94 @@ public class Auto_BLUE_Far_6 extends BaseOpMode {
 			return false;
 		};
 
-
 		// === FULL AUTON SEQUENCE ===
 
 		Actions.runBlocking(
 				RunSequentially(
-						goToShoot,
-						WaitFor(0.3),
 
-						// Aim + tilt
-						newAimTurretLL(),
+						RunInParallel(
+						startToShootBack,
+						WaitFor(0.1),
+						shooter_on
+						),
+
 						setAutonShooterAngle,
-						WaitFor(0.3),
+						newAimTurretLL(),
+						WaitFor(0.1),
+						shootArtifact,
+						WaitFor(1.0),
+						stopShooting,
+						shooter_off,
+						WaitFor(0.1),
+
+						//pickup1
+						startIntake,
+						shootToPickup1,
+						WaitFor(0.15),
+						stopIntake,
+
+						//opengate
+						pickupToOpengateS,
+						WaitFor(0.1),
+						opengateSToOpengate,
+						WaitFor(0.5),
+
 
 						shooter_on,
+						opengateToShoot,
+
+						WaitFor(0.1),
+
+						setAutonShooterAngleSecond,
+						newAimTurretLLSecond(),
+						WaitFor(0.1),
+						shootArtifact,
 						WaitFor(1.0),
-
-						// BALL 1
-						shootArtifact,
-						WaitFor(0.2),
-						stopShooting,
-						WaitFor(1.2),
-
-						// BALL 2
-						shootArtifact,
-						WaitFor(0.28),
-						stopShooting,
-						WaitFor(1.2),
-
-						// BALL 3
-
-						shootArtifact,
-						WaitFor(0.55),
-						stopShooting,
-						WaitFor(0.2),
-
 						stopShooting,
 						shooter_off,
 
-						// pickup
-						goToPickupF,
-						WaitFor(0.2),
 
-						goToPickup,
+						RunInParallel(
+						shootToPickup2S,
+						startIntake),
+
 						WaitFor(0.1),
+						pickup2SToPickup2,
+						WaitFor(0.15),
+						stopIntake,
+						RunInParallel(
+						pickup2ToShoot,
+						WaitFor(0.1),
+						shooter_on),
+						WaitFor(0.1),
+
+
+						setAutonShooterAngleThird,
+						newAimTurretLLFinal(),
+						WaitFor(0.1),
+						shootArtifact,
+						WaitFor(1.0),
+						stopShooting,
+						shooter_off,
+						WaitFor(0.2),
 
 						startIntake,
-						WaitFor(0.1),
-
-						goToPickupL,
-						WaitFor(0.6),
-
+						shootTopickup3S,
+						WaitFor(0.15),
+						pickup3SToPickup3,
 						stopIntake,
-						WaitFor(0.4),
-
-
-						backToShoot,
-						WaitFor(0.35),
-
-						// Aim + tilt
-						newAimTurretLLFinal(),
-						setAutonShooterAngle,
-						WaitFor(0.5),
-
-						shooter_on,
+						RunInParallel(
+						pickup3ToShoot,
+						WaitFor(0.1),
+						shooter_on),
+						setAutonShooterAngleFinal,
+						shootArtifact,
 						WaitFor(1.0),
+						finishline
 
-						// BALL 1
-						shootArtifact,
-						WaitFor(0.27),
-						stopShooting,
-						WaitFor(1.3),
 
-						// BALL 2
-						shootArtifact,
-						WaitFor(0.25),
-						stopShooting,
-						WaitFor(1.2),
 
-						// BALL 3
-						shootArtifact,
-						WaitFor(0.5),
-						stopShooting,
-						WaitFor(0.4),
 
-						stopShooting,
-						shooter_off,
-
-						finishLine
 				)
 		);
 	}

@@ -23,8 +23,7 @@ public class Auto_BLUE_Far_3 extends BaseOpMode {
 
 	// === TUNE THESE ===
 	private static final int AUTON_TURRET_TICKS = 20;      // tune this
-	private static final double AUTON_SHOOTER_POS = 0.75
-			;  // tune this
+	private static final double AUTON_SHOOTER_POS = 0.75;  // tune this
 	private static final double TURRET_HOLD_POWER = 0.1;  // tune 0.05–0.20
 
 	@Override
