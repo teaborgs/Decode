@@ -49,10 +49,10 @@ public class IntakeSystem extends AbstractSystem
 				intakeMotor.setPower(-1f);
 				break;
 			case SLOW_FORWARD:
-				intakeMotor.setPower(0.25f);
+				intakeMotor.setPower(-0.25f);
 				break;
 			case SLOW_REVERSE:
-				intakeMotor.setPower(-0.25f);
+				intakeMotor.setPower(0.25f);
 				break;
 			case STOP:
 			default:

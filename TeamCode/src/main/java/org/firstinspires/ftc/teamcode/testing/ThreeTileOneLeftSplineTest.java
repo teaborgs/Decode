@@ -23,12 +23,12 @@ public class ThreeTileOneLeftSplineTest extends LinearOpMode {
 		MecanumDrive.PARAMS.maxAngAccel     = Math.PI / 3.0;
 
 		MecanumDrive.PARAMS.axialGain       = 3.0;
-		MecanumDrive.PARAMS.lateralGain     = 5.0;
-		MecanumDrive.PARAMS.headingGain     = 5.0;
+		MecanumDrive.PARAMS.lateralGain     = 2.0;
+		MecanumDrive.PARAMS.headingGain     = 2.0;
 
 		MecanumDrive.PARAMS.axialVelGain    = 0.0;
 		MecanumDrive.PARAMS.lateralVelGain  = 0.0;
-		MecanumDrive.PARAMS.headingVelGain  = 0.1;
+		MecanumDrive.PARAMS.headingVelGain  = 0.0;
 
 		PinpointDrive drive = new PinpointDrive(hardwareMap, startPose);
 

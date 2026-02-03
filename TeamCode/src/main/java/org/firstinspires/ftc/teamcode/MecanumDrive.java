@@ -56,38 +56,40 @@ public class MecanumDrive {
     public static class Params {
         // IMU orientation
         public RevHubOrientationOnRobot.LogoFacingDirection logoFacingDirection =
-                RevHubOrientationOnRobot.LogoFacingDirection.FORWARD;
+                RevHubOrientationOnRobot.LogoFacingDirection.LEFT;
         public RevHubOrientationOnRobot.UsbFacingDirection usbFacingDirection =
-                RevHubOrientationOnRobot.UsbFacingDirection.RIGHT;
+                RevHubOrientationOnRobot.UsbFacingDirection.UP ;
 
         // drive model parameters
         public double inPerTick = 1; // with OTOS pose, this only affects kinematics, not localization
-        public double lateralInPerTick = 0.7523732311430573;
-        public double trackWidthTicks = 12.698491025795713;
+        public double lateralInPerTick = 0.5606832547705505;
+        public double trackWidthTicks = 11.060904280531883;
 
         // feedforward parameters (in tick units)
-        public double kS = 1.4775575219897403;
-        public double kV = 0.11913415633951076;
-        public double kA = 0.004;
+        public double kS = 1.4445890802182624;
+        public double kV = 0.12557544837670617;
+        public double kA = 0.0013;
         //kV: 0.11913415633951076, kS: 1.4775575219897403
 
         // path profile parameters (in inches)
-        public double maxWheelVel = 55;
-        public double minProfileAccel = -50;
-        public double maxProfileAccel = 50;
+        // path profile parameters (in inches)
+        public double maxWheelVel = 60;
+        public double minProfileAccel = -60;
+        public double maxProfileAccel = 60;
 
         // turn profile parameters (in radians)
-        public double maxAngVel = Math.PI /2 ;
-        public double maxAngAccel = Math.PI /2 ;
+        public double maxAngVel = Math.PI;      // ~3.14 rad/s
+        public double maxAngAccel = Math.PI;    // ~3.14 rad/s^2
 
         // path controller gains
-        public double axialGain = 2.0;
-        public double lateralGain = 1.2; // 1.6o
-        public double headingGain = 2.0;
+        public double axialGain = 2.5;
+        public double lateralGain = 1.1;
+        public double headingGain = 1.3;
 
         public double axialVelGain = 0.0;
-        public double lateralVelGain = 0.0; // 0.02
-        public double headingVelGain = 0.1;
+        public double lateralVelGain = 0.0;
+        public double headingVelGain = 0.11;
+
     }
 
     public static Params PARAMS = new Params();
