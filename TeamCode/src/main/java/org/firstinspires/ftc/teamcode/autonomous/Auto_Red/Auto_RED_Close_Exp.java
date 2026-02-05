@@ -13,30 +13,32 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import org.firstinspires.ftc.teamcode.BaseOpMode;
-import org.firstinspires.ftc.teamcode.RobotHardware;
+import org.firstinspires.ftc.teamcode.RobotHardwareTEST;
 import org.firstinspires.ftc.teamcode.autonomous.waypoints.WAYPOINTS_RED_CLOSE_EXP;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem;
+import org.firstinspires.ftc.teamcode.systems.OuttakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
 @Autonomous(name = "Autonom_Red_Close_Exp", group = "Auto")
 public class Auto_RED_Close_Exp extends BaseOpMode {
-	private RobotHardware robot;
+	private RobotHardwareTEST robot;
 
 	// === TUNE THESE ===
 	private static final int AUTON_TURRET_TICKS = 20;      // tune this
 	private static final double AUTON_SHOOTER_POS = 0.75;  // tune this
-	private static final double AUTON_SHOOTER_POS_SECOND = 0.77;
-	private static final double AUTON_SHOOTER_POS_THIRD = 0.76;
-	private static final double AUTON_SHOOTER_POS_FINAL = 0.74;
+	private static final double AUTON_SHOOTER_POS_SECOND = 0.60;
+	private static final double AUTON_SHOOTER_POS_THIRD = 0.60;
+	private static final double AUTON_SHOOTER_POS_FINAL = 0.60;
 	private static final double TURRET_HOLD_POWER = 0.1;  // tune 0.05–0.20
 	private static final double SHOOT_SAFE_IN = 8.0;
 
 
 	@Override
 	protected void OnInitialize() {
-		robot = new RobotHardware(hardwareMap);
+		robot = new RobotHardwareTEST(hardwareMap);
 		robot.init();
 		robot.limelight.pipelineSwitch(1);
+		OuttakeSystem.TICKS_PER_REV = 28;
 
 		// Zero turret encoder at known starting angle
 
@@ -82,7 +84,7 @@ public class Auto_RED_Close_Exp extends BaseOpMode {
 				0.40,    // maxPower
 				0.45,     // lockThreshold degrees
 				750,    // timeout ms
-				+1.0,    // directionSign (keep as sign; tune kP instead)
+				-1.0,    // directionSign (keep as sign; tune kP instead)
 				TURRET_HOLD_POWER
 		);
 	}
@@ -96,7 +98,7 @@ public class Auto_RED_Close_Exp extends BaseOpMode {
 				0.40,    // maxPower
 				0.45,     // lockThreshold degrees
 				750,    // timeout ms
-				+1.0,    // directionSign (keep as sign; tune kP instead)
+				-1.0,    // directionSign (keep as sign; tune kP instead)
 				TURRET_HOLD_POWER
 		);
 	}
@@ -111,14 +113,14 @@ public class Auto_RED_Close_Exp extends BaseOpMode {
 				0.45,    // maxPower (a bit higher)
 				0.70,    // lockThreshold degrees (more forgiving)
 				750,    // timeout ms (more time to reacquire)
-				+1.0,    // directionSign
+				-1.0,    // directionSign
 				TURRET_HOLD_POWER
 		);
 	}
 
 	private static class AimTurretWithLimelightAction implements Action {
 		private final Auto_RED_Close_Exp op;      // to access turretHoldCurrent()
-		private final RobotHardware robot;
+		private final RobotHardwareTEST robot;
 
 		private final double kP;
 		private final double minPower;
@@ -133,7 +135,7 @@ public class Auto_RED_Close_Exp extends BaseOpMode {
 
 		AimTurretWithLimelightAction(
 				Auto_RED_Close_Exp op,
-				RobotHardware robot,
+				RobotHardwareTEST robot,
 				double kP,
 				double minPower,
 				double maxPower,
@@ -390,11 +392,11 @@ public class Auto_RED_Close_Exp extends BaseOpMode {
 
 		// start shooter and open stopper
 		Action shooter_on = packet -> {
-			robot.outtake1.setIntakeDirection(IntakeSystem.IntakeDirection.FORWARD);
-			robot.outtake2.setIntakeDirection(IntakeSystem.IntakeDirection.FORWARD);
+			robot.outtake1.setRpm(4000);
+			robot.outtake2.setRpm(4000);
 			robot.intakeStopper.setDestination(TumblerSystem.TumblerDestination.TRANSFER);
 
-			// extra safety: ensure turret is holding before the vibration starts
+			// safety: hold turret
 			turretHoldCurrent(TURRET_HOLD_POWER);
 
 			return false;
@@ -402,11 +404,12 @@ public class Auto_RED_Close_Exp extends BaseOpMode {
 
 		//start shooter and close stopper
 		Action shooter_off = packet -> {
-			robot.outtake1.setIntakeDirection(IntakeSystem.IntakeDirection.STOP);
-			robot.outtake2.setIntakeDirection(IntakeSystem.IntakeDirection.STOP);
+			robot.outtake1.stop();
+			robot.outtake2.stop();
 			robot.intakeStopper.setDestination(TumblerSystem.TumblerDestination.IDLE);
 			return false;
 		};
+
 
 		// feed artifacts to shooter
 		Action shootArtifact = packet -> {

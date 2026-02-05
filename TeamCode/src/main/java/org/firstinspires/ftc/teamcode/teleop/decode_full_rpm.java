@@ -219,8 +219,8 @@ public final class decode_full_rpm extends BaseOpMode {
 	 * Eu păstrez ordinea ta: dacă e în 8..14 => near, altfel dacă e >=12 => far.
 	 */
 	private double shooterAngleFromDistanceCm(double distanceCm) {
-		double posNear = 0.58;
-		double posFar  = 0.59;
+		double posNear = 0.63;
+		double posFar  = 0.47;
 
 		// FAR: 12+ (prima condiție, ca să nu fie mâncată de near)
 		if (distanceCm >= 12.0) {
@@ -229,20 +229,20 @@ public final class decode_full_rpm extends BaseOpMode {
 		}
 
 		// NEAR: 8..12
-		if (distanceCm >= 8.0) {
+		if (distanceCm >= 7.0) {
 			shooterTargetRpm = shooterTargetRpmNear; // 4000
 			return shooterPosition = posNear;
 		}
 
 		// restul cazurilor tale (aproape de hub / foarte aproape)
-		if (distanceCm >= 2.0) {
+		if (distanceCm >= 4.0) {
 			shooterTargetRpm = shooterTargetRpmNear;
-			return shooterPosition = 0.58;
+			return shooterPosition = 0.65;
 		}
 
 		if (distanceCm >= -1.0) {
 			shooterTargetRpm = shooterTargetRpmNear;
-			return shooterPosition = 0.58;
+			return shooterPosition = 0.6;
 		}
 
 		shooterTargetRpm = 4500; // fallback
