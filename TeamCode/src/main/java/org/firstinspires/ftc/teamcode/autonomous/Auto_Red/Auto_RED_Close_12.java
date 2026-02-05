@@ -364,7 +364,7 @@ public class Auto_RED_Close_12 extends BaseOpMode {
 
 						newAimTurretLL(),
 						setAutonShooterAngle,
-						WaitFor(0.2),
+						WaitFor(0.35),
 
 						// preload
 						shootArtifact,
@@ -376,14 +376,14 @@ public class Auto_RED_Close_12 extends BaseOpMode {
 						goToPickup,
 						WaitFor(0.3),
 						stopIntake,
-						WaitFor(0.2),
+						//WaitFor(0.2),
 
 						RunInParallel(backToShoot, shooter_on),
 
 						// stack 1
 						newAimTurretLLFinal(),
 						setAutonShooterAngleSecond,
-						WaitFor(0.2),
+						WaitFor(0.35),
 						shootArtifact,
 						WaitFor(0.85),
 						shooter_off,
@@ -401,7 +401,7 @@ public class Auto_RED_Close_12 extends BaseOpMode {
 
 						newAimTurretLL(),
 						setAutonShooterAngleFinal,
-						WaitFor(0.2),
+						WaitFor(0.35),
 
 						// stack 2
 						shootArtifact,
@@ -420,7 +420,7 @@ public class Auto_RED_Close_12 extends BaseOpMode {
 
 						newAimTurretLL(),
 						setAutonShooterAngleFinal,
-						WaitFor(0.2),
+						WaitFor(0.35),
 
 						// stack 3
 						shootArtifact,
