@@ -8,7 +8,6 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
 import org.firstinspires.ftc.teamcode.BaseOpMode;
 import org.firstinspires.ftc.teamcode.RobotHardware;
-import org.firstinspires.ftc.teamcode.systems.LiftSystem;
 
 @Autonomous(name = "Approach to distance test", group = "Testing")
 public class ApproachToDistanceTest extends BaseOpMode

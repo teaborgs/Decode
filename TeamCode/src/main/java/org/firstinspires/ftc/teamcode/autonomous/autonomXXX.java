@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.autonomous;
+/*package org.firstinspires.ftc.teamcode.autonomous;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -7,7 +7,6 @@ import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.hardware.limelightvision.LLResult;
 
-import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem.IntakeDirection;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
@@ -167,4 +166,4 @@ public class autonomXXX extends LinearOpMode {
 				)
 		);
 	}
-}
+}*/

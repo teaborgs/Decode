@@ -8,18 +8,18 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.BaseOpMode;
 import org.firstinspires.ftc.teamcode.InputSystem;
-import org.firstinspires.ftc.teamcode.RobotHardwareTEST;
+import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem.IntakeDirection;
 import org.firstinspires.ftc.teamcode.systems.OuttakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
 import com.qualcomm.hardware.limelightvision.LLResult;
 
-@TeleOp(name = "decode (FULL) + Outtake RPM", group = "TeleOp")
-public final class decode_full_rpm extends BaseOpMode {
+@TeleOp(name = "🔵🔵decodeaza-mi-l🔵🔵", group = "TeleOp")
+public final class decodeBLUE extends BaseOpMode {
 	private InputSystem driveInput, armInput;
 
-	private RobotHardwareTEST robot;
+	private RobotHardware robot;
 
 	private static class Keybindings {
 		public static class Drive {
@@ -57,7 +57,7 @@ public final class decode_full_rpm extends BaseOpMode {
 
 	@Override
 	protected void OnStart() {
-		robot = new RobotHardwareTEST(hardwareMap);
+		robot = new RobotHardware(hardwareMap);
 		robot.init();
 
 		// shooter rpm config
@@ -127,8 +127,8 @@ public final class decode_full_rpm extends BaseOpMode {
 	private double shooterTargetRpm = 4500;
 
 	// cerința ta:
-	private final double shooterTargetRpmNear = 4000; // posNear
-	private final double shooterTargetRpmFar  = 4800; // posFar
+	private final double shooterTargetRpmNear = 3850; // posNear
+	private final double shooterTargetRpmFar  = 4450; // posFar
 
 	private void Shooter() {
 		// HOLD A = shoot
@@ -196,8 +196,8 @@ public final class decode_full_rpm extends BaseOpMode {
 			}
 		}
 
-		if (tx > 0) robot.turret.setIntakeDirection(IntakeDirection.SLOW_FORWARD);
-		else if (tx < 0) robot.turret.setIntakeDirection(IntakeDirection.SLOW_REVERSE);
+		if (tx > -1) robot.turret.setIntakeDirection(IntakeDirection.SLOW_FORWARD);
+		else if (tx < -1) robot.turret.setIntakeDirection(IntakeDirection.SLOW_REVERSE);
 	}
 
 	// ================= SHOOTER ANGLE =================
@@ -219,7 +219,7 @@ public final class decode_full_rpm extends BaseOpMode {
 	 * Eu păstrez ordinea ta: dacă e în 8..14 => near, altfel dacă e >=12 => far.
 	 */
 	private double shooterAngleFromDistanceCm(double distanceCm) {
-		double posNear = 0.63;
+		double posNear = 0.54;
 		double posFar  = 0.47;
 
 		// FAR: 12+ (prima condiție, ca să nu fie mâncată de near)
@@ -237,12 +237,12 @@ public final class decode_full_rpm extends BaseOpMode {
 		// restul cazurilor tale (aproape de hub / foarte aproape)
 		if (distanceCm >= 4.0) {
 			shooterTargetRpm = shooterTargetRpmNear;
-			return shooterPosition = 0.65;
+			return shooterPosition = 0.54;
 		}
 
 		if (distanceCm >= -1.0) {
 			shooterTargetRpm = shooterTargetRpmNear;
-			return shooterPosition = 0.6;
+			return shooterPosition = 0.54;
 		}
 
 		shooterTargetRpm = 4500; // fallback

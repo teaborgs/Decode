@@ -6,6 +6,7 @@ import com.acmerobotics.dashboard.canvas.Canvas;
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.*;
+import com.acmerobotics.roadrunner.AccelConstraint;
 import com.acmerobotics.roadrunner.AngularVelConstraint;
 import com.acmerobotics.roadrunner.DualNum;
 import com.acmerobotics.roadrunner.HolonomicController;
@@ -474,13 +475,27 @@ public class MecanumDrive {
                 FollowTrajectoryAction::new,
                 new TrajectoryBuilderParams(
                         1e-6,
-                        new ProfileParams(
-                                0.25, 0.1, 1e-2
-                        )
+                        new ProfileParams(0.25, 0.1, 1e-2)
                 ),
                 beginPose, 0.0,
                 defaultTurnConstraints,
                 defaultVelConstraint, defaultAccelConstraint
         );
     }
+
+    public TrajectoryActionBuilder actionBuilder(Pose2d beginPose, AccelConstraint accelConstraint) {
+        return new TrajectoryActionBuilder(
+                TurnAction::new,
+                FollowTrajectoryAction::new,
+                new TrajectoryBuilderParams(
+                        1e-6,
+                        new ProfileParams(0.25, 0.1, 1e-2)
+                ),
+                beginPose, 0.0,
+                defaultTurnConstraints,
+                defaultVelConstraint, accelConstraint
+        );
+    }
+
+
 }

@@ -13,24 +13,24 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import org.firstinspires.ftc.teamcode.BaseOpMode;
-import org.firstinspires.ftc.teamcode.RobotHardwareTEST;
+import org.firstinspires.ftc.teamcode.RobotHardware;
 import org.firstinspires.ftc.teamcode.autonomous.waypoints.WAYPOINTS_RED_CLOSE_EXP;
 import org.firstinspires.ftc.teamcode.systems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.systems.OuttakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@Autonomous(name = "Autonom_Red_Close_Exp", group = "Auto")
-public class Auto_RED_Close_Exp extends BaseOpMode {
-	private RobotHardwareTEST robot;
+@Autonomous(name = "🔴🔴Close_12+Open🔴🔴", group = "Auto")
+public class Auto_RED_Close_12GATE extends BaseOpMode {
+	private RobotHardware robot;
 
 	// === TUNE THESE ===
 	private static final int AUTON_TURRET_TICKS = 20;      // tune this
-	private static final double AUTON_SHOOTER_POS = 0.63;  // tune this
-	private static final double AUTON_SHOOTER_POS_SECOND = 0.63;
-	private static final double AUTON_SHOOTER_POS_THIRD = 0.63;
-	private static final double AUTON_SHOOTER_POS_FINAL = 0.63;
+	private static final double AUTON_SHOOTER_POS = 0.54;  // tune this
+	private static final double AUTON_SHOOTER_POS_SECOND = 0.54;
+	private static final double AUTON_SHOOTER_POS_THIRD = 0.54;
+	private static final double AUTON_SHOOTER_POS_FINAL = 0.54;
 	private static final double TURRET_HOLD_POWER = 0.1;  // tune 0.05–0.20
-	private static final double SHOOT_SAFE_IN = 8.0;
+	private static final double SHOOT_SAFE_IN = 11.0;
 
 	// ===== shooter control loop (NECESAR pt custom PID) =====
 	private boolean shooterEnabled = false;
@@ -39,7 +39,7 @@ public class Auto_RED_Close_Exp extends BaseOpMode {
 
 	@Override
 	protected void OnInitialize() {
-		robot = new RobotHardwareTEST(hardwareMap);
+		robot = new RobotHardware(hardwareMap);
 		robot.init();
 		robot.limelight.pipelineSwitch(1);
 
@@ -137,8 +137,8 @@ public class Auto_RED_Close_Exp extends BaseOpMode {
 	}
 
 	private static class AimTurretWithLimelightAction implements Action {
-		private final Auto_RED_Close_Exp op;
-		private final RobotHardwareTEST robot;
+		private final Auto_RED_Close_12GATE op;
+		private final RobotHardware robot;
 
 		private final double kP;
 		private final double minPower;
@@ -152,8 +152,8 @@ public class Auto_RED_Close_Exp extends BaseOpMode {
 		private long startTimeMs = 0;
 
 		AimTurretWithLimelightAction(
-				Auto_RED_Close_Exp op,
-				RobotHardwareTEST robot,
+				Auto_RED_Close_12GATE op,
+				RobotHardware robot,
 				double kP,
 				double minPower,
 				double maxPower,
