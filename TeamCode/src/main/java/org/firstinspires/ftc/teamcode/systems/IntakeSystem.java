@@ -47,7 +47,7 @@ public class IntakeSystem extends AbstractSystem
 				intakeMotor.setPower(1f);
 				break;
 			case FORWARD_SHOOT:
-				intakeMotor.setPower(0.9f);
+				intakeMotor.setPower(0.95f);
 				break;
 			case REVERSE:
 				intakeMotor.setPower(-1f);
