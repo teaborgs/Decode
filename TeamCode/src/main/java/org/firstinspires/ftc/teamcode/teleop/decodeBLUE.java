@@ -3,7 +3,11 @@ package org.firstinspires.ftc.teamcode.teleop;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Vector2d;
+import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.BaseOpMode;
@@ -13,8 +17,6 @@ import org.firstinspires.ftc.teamcode.systems.IntakeSystem.IntakeDirection;
 import org.firstinspires.ftc.teamcode.systems.OuttakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-import com.qualcomm.hardware.limelightvision.LLResult;
-
 @TeleOp(name = "🔵🔵decodeaza-mi-l🔵🔵", group = "TeleOp")
 public final class decodeBLUE extends BaseOpMode {
 	private InputSystem driveInput, armInput;
@@ -23,21 +25,34 @@ public final class decodeBLUE extends BaseOpMode {
 
 	private static class Keybindings {
 		public static class Drive {
+			// shoot / intake
 			public static final InputSystem.Key SHOOTER_KEY = new InputSystem.Key("a"); // hold = shoot
 			public static final InputSystem.Key INTAKE_REVERSE_KEY = new InputSystem.Key("b");
 			public static final InputSystem.Key INTAKE_KEY = new InputSystem.Key("right_bumper");
 
-			public static final InputSystem.Axis TURRET_ANGLE = new InputSystem.Axis("right_stick_x");
+			// shooter angle manual
 			public static final InputSystem.Axis SHOOTER_ANGLE = new InputSystem.Axis("right_stick_y");
 
+			// drivetrain
 			public static final InputSystem.Key SUPPRESS_KEY = new InputSystem.Key("left_bumper");
 			public static final InputSystem.Axis DRIVE_X = new InputSystem.Axis("left_stick_x");
 			public static final InputSystem.Axis DRIVE_Y = new InputSystem.Axis("left_stick_y");
 			public static final InputSystem.Axis DRIVE_ROT_L = new InputSystem.Axis("left_trigger");
 			public static final InputSystem.Axis DRIVE_ROT_R = new InputSystem.Axis("right_trigger");
 
-			public static final InputSystem.Key LL_AIM = new InputSystem.Key("dpad_up");
+			// turret manual axis (când autoAim e OFF)
+			public static final InputSystem.Axis TURRET_MANUAL = new InputSystem.Axis("right_stick_x");
 
+			// reset/select anchor
+			public static final InputSystem.Key RESET_ANCHOR_A = new InputSystem.Key("dpad_left");
+			public static final InputSystem.Key RESET_ANCHOR_B = new InputSystem.Key("dpad_right");
+
+			// toggle auto aim
+			public static final InputSystem.Key AIM_TOGGLE = new InputSystem.Key("dpad_up");
+			// reset turret encoder
+			public static final InputSystem.Key RESET_TURRET_ENCODER = new InputSystem.Key("dpad_down");
+
+			// auto shooter angle toggle
 			public static final InputSystem.Key AUTO_SHOOTER_ENABLE_KEY = new InputSystem.Key("start");
 			public static final InputSystem.Key AUTO_SHOOTER_DISABLE_KEY = new InputSystem.Key("back");
 		}
@@ -55,16 +70,139 @@ public final class decodeBLUE extends BaseOpMode {
 		armInput = input2;
 	}
 
+	// =========================
+	// GateV4 constants + state
+	// =========================
+
+	// ===== Reset pose (odometrie) =====
+	// Tu ai zis că nu ai nevoie de coordonate diferite la reset; păstrăm același reset.
+	private static final double RESET_X_IN = 0.0;
+	private static final double RESET_Y_IN = 0.0;
+	private static final double RESET_H_DEG = 0.0;
+
+	// ===== 2 anchors (ținte) selectabile =====
+	// Anchor A = valorile tale existente
+	private static final double ANCHOR_A_X = -4.205;
+	private static final double ANCHOR_A_Y = -47.2062;
+
+	// Anchor B = completezi tu
+	private static final double ANCHOR_B_X = 40.3;  // TODO: fill
+	private static final double ANCHOR_B_Y = -112.5;  // TODO: fill
+
+	// 2 variabile (exact cum ai cerut): selectează anchor-ul activ
+	private boolean anchorAActive = false;
+	private boolean anchorBActive = false;
+
+	// ===== Turret mechanical limits (deg intention) =====
+	private static final double TURRET_LIMIT_DEG = 170.0;
+	private static final double TURRET_RETURN_OK_DEG = 165.0; // hysteresis
+
+	// ===== Ticks safety =====
+	private static final int TICKS_BUFFER = 10;
+
+	// ===== PID in ticks (fallback / odometry) - mai rapid =====
+	private static final double kP = 0.0048;
+	private static final double kD = 0.0009;
+	private static final double MAX_POWER = 0.50;
+	private static final int ON_TARGET_TICKS = 6;
+
+	// ===== PID in ticks (LL aggressive) =====
+	private static final double kP_LL = 0.0060;
+	private static final double kD_LL = 0.0012;
+	private static final double MAX_POWER_LL = 0.60;
+
+	// ===== turret ticks limits =====
+	private static final int turretMinTicks = -472;
+	private static final int turretMaxTicks =  438;
+
+	private static final double degPerTick = 340.0 / 910.0; // ≈ 0.373626
+
+	// IMPORTANT: la tine semnul e invers (păstrat)
+	private static final double MOTOR_SIGN = -1.0;
+
+	// ===== Limelight FULL override (tx -> turret) =====
+	private static final double LL_DZ_STOP  = 1.2;
+	private static final double LL_DZ_START = 2.0;
+
+	private static final double LL_DEG_PER_TX = 1.8;
+	private static final double LL_MAX_STEP_DEG = 14.0;
+
+	private static final double LL_HOLD_SEC = 0.20;
+	private static final double LL_DISABLE_NEAR_LIMIT_DEG = 160.0;
+
+	private static final double LL_TURN_SIGN = +1.0;
+
+	// ===== State =====
+	private boolean autoAim = false;      // START: MANUAL
+	private boolean aimInvalid = false;
+
+	private boolean prevResetAnchorA = false;
+	private boolean prevResetAnchorB = false;
+	private boolean prevAimToggle = false;
+	private boolean prevResetTurretEncoder = false;
+
+	private int targetTicks = 0;
+	private double errPrev = 0.0;
+	private final ElapsedTime dtTimer = new ElapsedTime();
+
+	// LL state
+	private boolean llAligned = false;
+	private boolean llHasLock = false;
+	private double llLastSeenSec = -1.0;
+
+	// debug
+	private boolean useLL_dbg = false;
+	private double tx_dbg = 0.0;
+	private double turretCmdDeg_dbg = 0.0;
+	private double turretDesiredDeg_dbg = 0.0;
+	private double targetAngleFieldDeg_dbg = 0.0;
+	private double activeAnchorX_dbg = 0.0;
+	private double activeAnchorY_dbg = 0.0;
+
+	// ================= SHOOTER / OUTTAKE RPM =================
+	private boolean transfer_servo = false;
+
+	private double shooterTargetRpm = 4500;
+	private final double shooterTargetRpmNear = 3850;
+	private final double shooterTargetRpmFar  = 4800;
+
+	// ================= SHOOTER ANGLE =================
+	private static final double SHOOTER_DEADZONE = 0.15;
+	private double shooterPosition = 0.5;
+
+	private boolean autoShooterAngle = true;
+	private boolean prevAutoShooterKeyPressed = false;
+	private boolean prevAutoAngleKeyPressed = false;
+
 	@Override
 	protected void OnStart() {
 		robot = new RobotHardware(hardwareMap);
 		robot.init();
 
-		// shooter rpm config
 		OuttakeSystem.TICKS_PER_REV = 28;
 
-		// limelight
 		robot.limelight.pipelineSwitch(0);
+
+		// turret encoder reset (identic GateV4)
+		DcMotorEx turretMotor = robot.turret.getMotor();
+		turretMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+		turretMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+		// reset pose default
+		setPoseInches(RESET_X_IN, RESET_Y_IN, RESET_H_DEG);
+
+		// default anchor A
+		anchorAActive = true;
+		anchorBActive = false;
+
+		// START: turret manual
+		autoAim = false;
+		aimInvalid = false;
+		llAligned = false;
+		llHasLock = false;
+		llLastSeenSec = -1.0;
+		errPrev = 0.0;
+		dtTimer.reset();
 
 		shooterPosition = robot.turretTumbler.getPosition();
 	}
@@ -75,20 +213,65 @@ public final class decodeBLUE extends BaseOpMode {
 			robot.drivetrain.updatePoseEstimate();
 		}
 
-		// === TOGGLE autoShooterAngle with START ===
+		// === DPAD_LEFT: reset odo + select Anchor A ===
+		boolean resetA = driveInput.isPressed(Keybindings.Drive.RESET_ANCHOR_A);
+		if (resetA && !prevResetAnchorA) {
+			setPoseInches(RESET_X_IN, RESET_Y_IN, RESET_H_DEG);
+
+			anchorAActive = true;
+			anchorBActive = false;
+		}
+		prevResetAnchorA = resetA;
+
+		// === DPAD_RIGHT: reset odo + select Anchor B ===
+		boolean resetB = driveInput.isPressed(Keybindings.Drive.RESET_ANCHOR_B);
+		if (resetB && !prevResetAnchorB) {
+			setPoseInches(RESET_X_IN, RESET_Y_IN, RESET_H_DEG);
+
+			anchorAActive = false;
+			anchorBActive = true;
+		}
+		prevResetAnchorB = resetB;
+
+		// === DPAD_DOWN: RESET TURRET ENCODER (failsafe) ===
+		boolean resetTurret = driveInput.isPressed(Keybindings.Drive.RESET_TURRET_ENCODER);
+		if (resetTurret && !prevResetTurretEncoder) {
+
+			DcMotorEx turretMotor = robot.turret.getMotor();
+
+			turretMotor.setPower(0); // oprește motorul
+
+			turretMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+			turretMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+			// resetăm și state intern PID
+			targetTicks = 0;
+			errPrev = 0.0;
+			dtTimer.reset();
+		}
+		prevResetTurretEncoder = resetTurret;
+
+		// === DPAD_UP: toggle autoAim ===
+		boolean aimToggle = driveInput.isPressed(Keybindings.Drive.AIM_TOGGLE);
+		if (aimToggle && !prevAimToggle) {
+			autoAim = !autoAim;
+
+			aimInvalid = false;
+			llAligned = false;
+			llHasLock = false;
+			llLastSeenSec = -1.0;
+
+			errPrev = 0.0;
+			dtTimer.reset();
+		}
+		prevAimToggle = aimToggle;
+
+		// === TOGGLE autoShooterAngle with START/BACK ===
 		boolean autoShooterKey = driveInput.isPressed(Keybindings.Drive.AUTO_SHOOTER_ENABLE_KEY);
 		if (autoShooterKey && !prevAutoShooterKeyPressed) {
 			autoShooterAngle = !autoShooterAngle;
 		}
 		prevAutoShooterKeyPressed = autoShooterKey;
-
-		// === TOGGLE auto_aim with DPAD_UP ===
-		boolean llAimPressed = driveInput.isPressed(Keybindings.Drive.LL_AIM);
-		if (llAimPressed && !prevLlAimPressed) {
-			auto_aim = !auto_aim;
-			turretAligned = false;
-		}
-		prevLlAimPressed = llAimPressed;
 
 		boolean autoAngleKey = driveInput.isPressed(Keybindings.Drive.AUTO_SHOOTER_DISABLE_KEY);
 		if (autoAngleKey && !prevAutoAngleKeyPressed) {
@@ -97,11 +280,10 @@ public final class decodeBLUE extends BaseOpMode {
 		prevAutoAngleKeyPressed = autoAngleKey;
 
 		Drive();
-		Shooter();       // RPM bazat pe distanță/poziție
-		Turret();
-		ShooterAngle();  // aici se calculează distanța și se setează și rpm-ul
+		TurretAimV4_IN_TELEOP();
+		Shooter();
+		ShooterAngle();
 		Intake();
-		UpdateLimelight();
 	}
 
 	// ================= DRIVE =================
@@ -121,19 +303,8 @@ public final class decodeBLUE extends BaseOpMode {
 	}
 
 	// ================= SHOOTER / OUTTAKE RPM =================
-	private boolean transfer_servo = false;
-
-	// target din distanță (default)
-	private double shooterTargetRpm = 4500;
-
-	// cerința ta:
-	private final double shooterTargetRpmNear = 3850; // posNear
-	private final double shooterTargetRpmFar  = 4450; // posFar
-
 	private void Shooter() {
-		// HOLD A = shoot
 		if (driveInput.isPressed(Keybindings.Drive.SHOOTER_KEY)) {
-			// NU mai forțăm aici un preset. shooterTargetRpm e setat de ShooterAngle() (auto).
 			robot.outtake1.setRpm(shooterTargetRpm);
 			robot.outtake2.setRpm(shooterTargetRpm);
 
@@ -148,93 +319,199 @@ public final class decodeBLUE extends BaseOpMode {
 		}
 	}
 
-	// ================= TURRET =================
-	private static final double TURRET_DEADZONE = 0.12;
-	private boolean auto_aim = true;
+	// ================= TURRET AIM (GateV4 identic când autoAim=ON) =================
+	private static final double TURRET_MANUAL_DEADZONE = 0.12;
 
-	private static final double TURRET_LL_DEADZONE_STOP  = 2.0;
-	private static final double TURRET_LL_DEADZONE_START = 3.0;
+	private void TurretAimV4_IN_TELEOP() {
+		DcMotorEx turret = robot.turret.getMotor();
 
-	private boolean turretAligned = false;
-	private boolean prevLlAimPressed = false;
+		// MANUAL când autoAim e OFF
+		if (!autoAim) {
+			double x = driveInput.getValue(Keybindings.Drive.TURRET_MANUAL);
 
-	private void Turret() {
-		double x = driveInput.getValue(Keybindings.Drive.TURRET_ANGLE);
-
-		// MANUAL MODE
-		if (!auto_aim) {
-			if (Math.abs(x) < TURRET_DEADZONE) {
-				robot.turret.setIntakeDirection(IntakeDirection.STOP);
+			if (Math.abs(x) < TURRET_MANUAL_DEADZONE) {
+				turret.setPower(0);
 				return;
 			}
-			robot.turret.setIntakeDirection(x > 0 ? IntakeDirection.SLOW_FORWARD : IntakeDirection.SLOW_REVERSE);
+
+			// limită manuală
+			turret.setPower(MOTOR_SIGN * clamp(x, -0.6, 0.6));
 			return;
 		}
 
-		// AUTO AIM MODE
-		LLResult result = robot.limelight.getLatestResult();
-		if (result == null || !result.isValid()) {
-			robot.turret.setIntakeDirection(IntakeDirection.STOP);
-			return;
-		}
+		// ======================
+		// (A) Fallback (anchor) - SELECTABIL A/B
+		// ======================
+		Pose2d p = robot.drivetrain.pose;
+		double robotX = p.position.x;
+		double robotY = p.position.y;
+		double robotHeadingDeg = Math.toDegrees(p.heading.log());
 
-		double tx = result.getTx();
+		double ax = anchorAActive ? ANCHOR_A_X : ANCHOR_B_X;
+		double ay = anchorAActive ? ANCHOR_A_Y : ANCHOR_B_Y;
+		activeAnchorX_dbg = ax;
+		activeAnchorY_dbg = ay;
 
-		// hysteresis
-		if (turretAligned) {
-			if (Math.abs(tx) > TURRET_LL_DEADZONE_START) {
-				turretAligned = false;
-			} else {
-				robot.turret.setIntakeDirection(IntakeDirection.STOP);
-				return;
-			}
+		double dx = ax - robotX;
+		double dy = -(ay - robotY);
+
+		double targetAngleFieldDeg = Math.toDegrees(Math.atan2(dy, dx));
+		targetAngleFieldDeg_dbg = targetAngleFieldDeg;
+
+		double turretDesiredDeg = wrapDeg(targetAngleFieldDeg + robotHeadingDeg);
+		turretDesiredDeg_dbg = turretDesiredDeg;
+
+		if (!aimInvalid) {
+			if (Math.abs(turretDesiredDeg) > TURRET_LIMIT_DEG) aimInvalid = true;
 		} else {
-			if (Math.abs(tx) < TURRET_LL_DEADZONE_STOP) {
-				turretAligned = true;
-				robot.turret.setIntakeDirection(IntakeDirection.STOP);
-				return;
+			if (Math.abs(turretDesiredDeg) < TURRET_RETURN_OK_DEG) aimInvalid = false;
+		}
+
+		// ======================
+		// (B) Limelight override (tx) + hold
+		// ======================
+		LLResult r = robot.limelight.getLatestResult();
+		boolean llValid = (r != null && r.isValid());
+
+		double nowSec = getRuntime();
+		if (llValid) {
+			llLastSeenSec = nowSec;
+			llHasLock = true;
+			tx_dbg = r.getTx();
+		} else {
+			tx_dbg = 0.0;
+			if (llHasLock && llLastSeenSec >= 0 && (nowSec - llLastSeenSec) > LL_HOLD_SEC) {
+				llHasLock = false;
+				llAligned = false;
 			}
 		}
 
-		if (tx > -1) robot.turret.setIntakeDirection(IntakeDirection.SLOW_FORWARD);
-		else if (tx < -1) robot.turret.setIntakeDirection(IntakeDirection.SLOW_REVERSE);
+		int nowTicks = turret.getCurrentPosition();
+		double nowTurretDeg = nowTicks * degPerTick;
+		boolean nearLimit = (Math.abs(nowTurretDeg) >= LL_DISABLE_NEAR_LIMIT_DEG);
+
+		boolean useLL = llHasLock && !nearLimit;
+		useLL_dbg = useLL;
+
+		// ======================
+		// (C) Decide command deg
+		// ======================
+		double turretCmdDeg;
+
+		if (useLL) {
+			double tx = r.getTx();
+
+			if (llAligned) {
+				if (Math.abs(tx) > LL_DZ_START) {
+					llAligned = false;
+				} else {
+					turret.setPower(0);
+					return;
+				}
+			} else {
+				if (Math.abs(tx) < LL_DZ_STOP) {
+					llAligned = true;
+					turret.setPower(0);
+					return;
+				}
+			}
+
+			double stepDeg = clamp(LL_TURN_SIGN * tx * LL_DEG_PER_TX, -LL_MAX_STEP_DEG, LL_MAX_STEP_DEG);
+			turretCmdDeg = nowTurretDeg + stepDeg;
+			turretCmdDeg = clamp(turretCmdDeg, -TURRET_LIMIT_DEG, TURRET_LIMIT_DEG);
+
+		} else {
+			if (aimInvalid) {
+				turret.setPower(0);
+				return;
+			}
+			turretCmdDeg = clamp(turretDesiredDeg, -TURRET_LIMIT_DEG, TURRET_LIMIT_DEG);
+		}
+
+		turretCmdDeg_dbg = turretCmdDeg;
+
+		// ======================
+		// (D) deg -> ticks target
+		// ======================
+		int unclamped = (int) Math.round(turretCmdDeg / degPerTick);
+		targetTicks = clampTicks(unclamped);
+
+		// ======================
+		// (E) PID in ticks + hard guard
+		// ======================
+		nowTicks = turret.getCurrentPosition();
+		int errTicks = targetTicks - nowTicks;
+
+		double dt = Math.max(0.01, dtTimer.seconds());
+		dtTimer.reset();
+
+		double err = errTicks;
+		double derr = (err - errPrev) / dt;
+		errPrev = err;
+
+		if (Math.abs(errTicks) < ON_TARGET_TICKS) {
+			turret.setPower(0);
+			return;
+		}
+
+		double pGain = useLL ? kP_LL : kP;
+		double dGain = useLL ? kD_LL : kD;
+		double maxPwr = useLL ? MAX_POWER_LL : MAX_POWER;
+
+		double power = pGain * err + dGain * derr;
+		power = clamp(power, -maxPwr, maxPwr);
+
+		power = guardPowerByLimits(power, nowTicks);
+
+		turret.setPower(MOTOR_SIGN * power);
+	}
+
+	private int clampTicks(int t) {
+		int lo = turretMinTicks + TICKS_BUFFER;
+		int hi = turretMaxTicks - TICKS_BUFFER;
+		return Math.max(lo, Math.min(hi, t));
+	}
+
+	private double guardPowerByLimits(double pwr, int nowTicks) {
+		int lo = turretMinTicks + TICKS_BUFFER;
+		int hi = turretMaxTicks - TICKS_BUFFER;
+
+		if (nowTicks >= hi && pwr > 0) return 0.0;
+		if (nowTicks <= lo && pwr < 0) return 0.0;
+
+		return pwr;
+	}
+
+	private void setPoseInches(double xIn, double yIn, double headingDeg) {
+		robot.drivetrain.pose = new Pose2d(new Vector2d(xIn, yIn), Math.toRadians(headingDeg));
+	}
+
+	private static double wrapDeg(double a) {
+		a = a % 360.0;
+		if (a <= -180.0) a += 360.0;
+		if (a > 180.0) a -= 360.0;
+		return a;
+	}
+
+	private static double clamp(double v, double lo, double hi) {
+		return Math.max(lo, Math.min(hi, v));
 	}
 
 	// ================= SHOOTER ANGLE =================
-	private static final double SHOOTER_DEADZONE = 0.15;
-	private double shooterPosition = 0.5;
-
-	private boolean autoShooterAngle = true;
-	private boolean prevAutoShooterKeyPressed = false;
-	private boolean prevAutoAngleKeyPressed = false;
-
-	private void UpdateLimelight() {}
-
-	/**
-	 * MAP distanță -> poziție servo + RPM:
-	 *  - posNear -> 4000 rpm
-	 *  - posFar  -> 4800 rpm
-	 *
-	 * NOTĂ: condițiile tale se suprapun (>=12 e și în intervalul 8..14).
-	 * Eu păstrez ordinea ta: dacă e în 8..14 => near, altfel dacă e >=12 => far.
-	 */
 	private double shooterAngleFromDistanceCm(double distanceCm) {
 		double posNear = 0.54;
 		double posFar  = 0.47;
 
-		// FAR: 12+ (prima condiție, ca să nu fie mâncată de near)
 		if (distanceCm >= 12.0) {
-			shooterTargetRpm = shooterTargetRpmFar; // 4800
+			shooterTargetRpm = shooterTargetRpmFar;
 			return shooterPosition = posFar;
 		}
 
-		// NEAR: 8..12
 		if (distanceCm >= 7.0) {
-			shooterTargetRpm = shooterTargetRpmNear; // 4000
+			shooterTargetRpm = shooterTargetRpmNear;
 			return shooterPosition = posNear;
 		}
 
-		// restul cazurilor tale (aproape de hub / foarte aproape)
 		if (distanceCm >= 4.0) {
 			shooterTargetRpm = shooterTargetRpmNear;
 			return shooterPosition = 0.54;
@@ -245,10 +522,9 @@ public final class decodeBLUE extends BaseOpMode {
 			return shooterPosition = 0.54;
 		}
 
-		shooterTargetRpm = 4500; // fallback
+		shooterTargetRpm = 4500;
 		return shooterPosition = 0.75;
 	}
-
 
 	private void ShooterAngle() {
 		if (autoShooterAngle) {
@@ -266,7 +542,6 @@ public final class decodeBLUE extends BaseOpMode {
 
 			double distanceCm = (goalHeightCm - limelightLensHeightCm) / Math.tan(angleToGoalRadians);
 
-			// setează și poziție și shooterTargetRpm
 			shooterPosition = shooterAngleFromDistanceCm(distanceCm);
 
 			if (shooterPosition < 0.0) shooterPosition = 0.0;
@@ -276,7 +551,6 @@ public final class decodeBLUE extends BaseOpMode {
 			return;
 		}
 
-		// manual
 		double input = -driveInput.getValue(Keybindings.Drive.SHOOTER_ANGLE);
 		if (Math.abs(input) < SHOOTER_DEADZONE) return;
 
@@ -289,7 +563,6 @@ public final class decodeBLUE extends BaseOpMode {
 
 	// ================= INTAKE =================
 	private void Intake() {
-
 		if (driveInput.isPressed(Keybindings.Drive.SHOOTER_KEY)
 				&& driveInput.isPressed(Keybindings.Drive.INTAKE_KEY)) {
 
@@ -320,7 +593,6 @@ public final class decodeBLUE extends BaseOpMode {
 			telemetry.addData("ODO H (deg)", Math.toDegrees(p.heading.log()));
 		}
 
-		// outtake rpm
 		if (robot != null) {
 			double r1 = robot.outtake1.getRpm();
 			double r2 = robot.outtake2.getRpm();
@@ -330,44 +602,47 @@ public final class decodeBLUE extends BaseOpMode {
 			telemetry.addData("AVG RPM", (int) ((r1 + r2) / 2.0));
 		}
 
+		telemetry.addLine(" ");
+		telemetry.addData("Anchor", anchorAActive ? "A" : "B");
+		telemetry.addData("AnchorX", activeAnchorX_dbg);
+		telemetry.addData("AnchorY", activeAnchorY_dbg);
+
+		telemetry.addData("Turret AutoAim", autoAim ? "ON (GateV4)" : "OFF (MANUAL)");
+		telemetry.addData("AimInvalid", aimInvalid ? "YES (TURN ROBOT)" : "NO");
+		telemetry.addData("UseLL", useLL_dbg ? "YES" : "NO");
+		telemetry.addData("LLAligned", llAligned ? "YES" : "NO");
+
 		if (robot == null || robot.limelight == null) {
 			telemetry.addLine("Robot sau Limelight NULL");
 			return;
 		}
 
-		LLResult result = robot.limelight.getLatestResult();
-
-		double tx = -1, ty = -1, ta = -1;
-		double distanceCm = -1;
-		boolean hasTarget = false;
-
-		if (result != null && result.isValid()) {
-			tx = result.getTx();
-			ty = result.getTy();
-			ta = result.getTa();
-			hasTarget = true;
-
-			double limelightMountAngleDegrees = 85.0;
-			double limelightLensHeightCm = 40.0;
-			double goalHeightCm = 105.0;
-
-			double angleToGoalRadians = Math.toRadians(limelightMountAngleDegrees + ty);
-			if (Math.abs(angleToGoalRadians) > 0.001) {
-				distanceCm = (goalHeightCm - limelightLensHeightCm) / Math.tan(angleToGoalRadians);
-			} else {
-				hasTarget = false;
-			}
-		}
-
-		telemetry.addData("LL tx", tx);
-		telemetry.addData("LL ty", ty);
-		telemetry.addData("LL ta", ta);
+		LLResult r = robot.limelight.getLatestResult();
+		telemetry.addData("LL valid", (r != null && r.isValid()));
+		if (r != null && r.isValid()) telemetry.addData("LL tx", r.getTx());
+		telemetry.addData("tx_dbg", tx_dbg);
 		telemetry.addData("LL Last Update", robot.limelight.getTimeSinceLastUpdate());
 
-		telemetry.addData("LL Distance", hasTarget ? distanceCm : "NO TARGET");
+		telemetry.addLine(" ");
+		telemetry.addData("fieldAngleDeg", targetAngleFieldDeg_dbg);
+		telemetry.addData("turretDesiredDeg", turretDesiredDeg_dbg);
+		telemetry.addData("turretCmdDeg", turretCmdDeg_dbg);
 
+		int nowTicks = robot.turret.getMotor().getCurrentPosition();
+		telemetry.addLine(" ");
+		telemetry.addData("TurretTicks", nowTicks);
+		telemetry.addData("TargetTicks", targetTicks);
+		telemetry.addData("MinTicks", turretMinTicks);
+		telemetry.addData("MaxTicks", turretMaxTicks);
+		telemetry.addData("degPerTick", degPerTick);
+		telemetry.addData("BUFFER", TICKS_BUFFER);
+		telemetry.addData("MOTOR_SIGN", MOTOR_SIGN);
+
+		telemetry.addLine(" ");
 		telemetry.addData("Auto Shooter Angle", autoShooterAngle ? "ON" : "OFF");
-		telemetry.addData("Turret Mode", auto_aim ? "AUTO" : "MANUAL");
 		telemetry.addData("Shooter Pos", shooterPosition);
+
+		telemetry.addLine(" ");
+		telemetry.addData("Keys", "DPAD_LEFT=Reset+AnchorA, DPAD_RIGHT=Reset+AnchorB, DPAD_UP=ToggleAutoAim");
 	}
 }
