@@ -88,7 +88,7 @@ public class Auto_BLUE_Close_12GATE extends BaseOpMode {
 				0.40,    // maxPower
 				0.45,    // lockThreshold degrees
 				750,     // timeout ms
-				-1.0,    // directionSign
+				1.0,    // directionSign
 				TURRET_HOLD_POWER
 		);
 	}
@@ -102,7 +102,7 @@ public class Auto_BLUE_Close_12GATE extends BaseOpMode {
 				0.40,    // maxPower
 				0.45,    // lockThreshold degrees
 				750,     // timeout ms
-				-1.0,    // directionSign
+				1.0,    // directionSign
 				TURRET_HOLD_POWER
 		);
 	}
@@ -116,7 +116,7 @@ public class Auto_BLUE_Close_12GATE extends BaseOpMode {
 				0.40,
 				0.45,
 				750,
-				-1.0,
+				1.0,
 				TURRET_HOLD_POWER
 		);
 	}
@@ -131,7 +131,7 @@ public class Auto_BLUE_Close_12GATE extends BaseOpMode {
 				0.45,
 				0.70,
 				750,
-				-1.0,
+				1.0,
 				TURRET_HOLD_POWER
 		);
 	}

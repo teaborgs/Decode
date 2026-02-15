@@ -75,21 +75,17 @@ public final class decodeBLUE extends BaseOpMode {
 	// =========================
 
 	// ===== Reset pose (odometrie) =====
-	// Tu ai zis că nu ai nevoie de coordonate diferite la reset; păstrăm același reset.
 	private static final double RESET_X_IN = 0.0;
 	private static final double RESET_Y_IN = 0.0;
 	private static final double RESET_H_DEG = 0.0;
 
 	// ===== 2 anchors (ținte) selectabile =====
-	// Anchor A = valorile tale existente
 	private static final double ANCHOR_A_X = -4.205;
 	private static final double ANCHOR_A_Y = -47.2062;
 
-	// Anchor B = completezi tu
-	private static final double ANCHOR_B_X = 40.3;  // TODO: fill
-	private static final double ANCHOR_B_Y = -112.5;  // TODO: fill
+	private static final double ANCHOR_B_X = 40.3;   // TODO
+	private static final double ANCHOR_B_Y = -112.5; // TODO
 
-	// 2 variabile (exact cum ai cerut): selectează anchor-ul activ
 	private boolean anchorAActive = false;
 	private boolean anchorBActive = false;
 
@@ -100,7 +96,7 @@ public final class decodeBLUE extends BaseOpMode {
 	// ===== Ticks safety =====
 	private static final int TICKS_BUFFER = 10;
 
-	// ===== PID in ticks (fallback / odometry) - mai rapid =====
+	// ===== PID in ticks (fallback / odometry) =====
 	private static final double kP = 0.0048;
 	private static final double kD = 0.0009;
 	private static final double MAX_POWER = 0.50;
@@ -111,14 +107,33 @@ public final class decodeBLUE extends BaseOpMode {
 	private static final double kD_LL = 0.0012;
 	private static final double MAX_POWER_LL = 0.60;
 
-	// ===== turret ticks limits =====
+	// ===== turret ticks limits (LOGICE) =====
+	// Acestea rămân “cum le-ai calibrat tu” în coordonata logică.
 	private static final int turretMinTicks = -472;
 	private static final int turretMaxTicks =  438;
 
 	private static final double degPerTick = 340.0 / 910.0; // ≈ 0.373626
 
-	// IMPORTANT: la tine semnul e invers (păstrat)
-	private static final double MOTOR_SIGN = -1.0;
+	// ==========================================================
+	// UNICUL LOC unde reparăm semnul la putere + semnul la encoder
+	// ==========================================================
+	//
+	// Dacă în TurretSystem ai setDirection(REVERSE) (cum e acum în codul tău),
+	// atunci HW_SIGN trebuie să fie -1 ca “logica” să rămână consistentă.
+	//
+	// Dacă vei schimba TurretSystem pe FORWARD, pune HW_SIGN = +1.
+	//
+	private static final int TURRET_HW_SIGN = 1;
+
+	private int getTurretTicks() {
+		// ticks “LOGICE”
+		return TURRET_HW_SIGN * robot.turret.getMotor().getCurrentPosition();
+	}
+
+	private void setTurretPowerLogical(double logicalPower) {
+		// power “LOGIC” (în coordonata logică)
+		robot.turret.getMotor().setPower(TURRET_HW_SIGN * logicalPower);
+	}
 
 	// ===== Limelight FULL override (tx -> turret) =====
 	private static final double LL_DZ_STOP  = 1.2;
@@ -130,10 +145,11 @@ public final class decodeBLUE extends BaseOpMode {
 	private static final double LL_HOLD_SEC = 0.20;
 	private static final double LL_DISABLE_NEAR_LIMIT_DEG = 160.0;
 
+	// Semnul de “tx -> stânga/dreapta” (dacă LL se duce invers, schimbă aici)
 	private static final double LL_TURN_SIGN = +1.0;
 
 	// ===== State =====
-	private boolean autoAim = false;      // START: MANUAL
+	private boolean autoAim = false;
 	private boolean aimInvalid = false;
 
 	private boolean prevResetAnchorA = false;
@@ -183,7 +199,7 @@ public final class decodeBLUE extends BaseOpMode {
 
 		robot.limelight.pipelineSwitch(0);
 
-		// turret encoder reset (identic GateV4)
+		// turret encoder reset
 		DcMotorEx turretMotor = robot.turret.getMotor();
 		turretMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 		turretMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -239,12 +255,11 @@ public final class decodeBLUE extends BaseOpMode {
 
 			DcMotorEx turretMotor = robot.turret.getMotor();
 
-			turretMotor.setPower(0); // oprește motorul
+			turretMotor.setPower(0);
 
 			turretMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 			turretMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-			// resetăm și state intern PID
 			targetTicks = 0;
 			errPrev = 0.0;
 			dtTimer.reset();
@@ -319,7 +334,7 @@ public final class decodeBLUE extends BaseOpMode {
 		}
 	}
 
-	// ================= TURRET AIM (GateV4 identic când autoAim=ON) =================
+	// ================= TURRET AIM =================
 	private static final double TURRET_MANUAL_DEADZONE = 0.12;
 
 	private void TurretAimV4_IN_TELEOP() {
@@ -330,12 +345,11 @@ public final class decodeBLUE extends BaseOpMode {
 			double x = driveInput.getValue(Keybindings.Drive.TURRET_MANUAL);
 
 			if (Math.abs(x) < TURRET_MANUAL_DEADZONE) {
-				turret.setPower(0);
+				setTurretPowerLogical(0);
 				return;
 			}
 
-			// limită manuală
-			turret.setPower(MOTOR_SIGN * clamp(x, -0.6, 0.6));
+			setTurretPowerLogical(clamp(x, -0.6, 0.6));
 			return;
 		}
 
@@ -386,8 +400,8 @@ public final class decodeBLUE extends BaseOpMode {
 			}
 		}
 
-		int nowTicks = turret.getCurrentPosition();
-		double nowTurretDeg = nowTicks * degPerTick;
+		int nowTicks = getTurretTicks();                 // LOGIC ticks
+		double nowTurretDeg = nowTicks * degPerTick;     // LOGIC deg
 		boolean nearLimit = (Math.abs(nowTurretDeg) >= LL_DISABLE_NEAR_LIMIT_DEG);
 
 		boolean useLL = llHasLock && !nearLimit;
@@ -405,13 +419,13 @@ public final class decodeBLUE extends BaseOpMode {
 				if (Math.abs(tx) > LL_DZ_START) {
 					llAligned = false;
 				} else {
-					turret.setPower(0);
+					setTurretPowerLogical(0);
 					return;
 				}
 			} else {
 				if (Math.abs(tx) < LL_DZ_STOP) {
 					llAligned = true;
-					turret.setPower(0);
+					setTurretPowerLogical(0);
 					return;
 				}
 			}
@@ -422,7 +436,7 @@ public final class decodeBLUE extends BaseOpMode {
 
 		} else {
 			if (aimInvalid) {
-				turret.setPower(0);
+				setTurretPowerLogical(0);
 				return;
 			}
 			turretCmdDeg = clamp(turretDesiredDeg, -TURRET_LIMIT_DEG, TURRET_LIMIT_DEG);
@@ -434,12 +448,12 @@ public final class decodeBLUE extends BaseOpMode {
 		// (D) deg -> ticks target
 		// ======================
 		int unclamped = (int) Math.round(turretCmdDeg / degPerTick);
-		targetTicks = clampTicks(unclamped);
+		targetTicks = clampTicks(unclamped); // LOGIC target ticks
 
 		// ======================
-		// (E) PID in ticks + hard guard
+		// (E) PID in ticks + hard guard (ALL LOGIC)
 		// ======================
-		nowTicks = turret.getCurrentPosition();
+		nowTicks = getTurretTicks();
 		int errTicks = targetTicks - nowTicks;
 
 		double dt = Math.max(0.01, dtTimer.seconds());
@@ -450,7 +464,7 @@ public final class decodeBLUE extends BaseOpMode {
 		errPrev = err;
 
 		if (Math.abs(errTicks) < ON_TARGET_TICKS) {
-			turret.setPower(0);
+			setTurretPowerLogical(0);
 			return;
 		}
 
@@ -463,21 +477,23 @@ public final class decodeBLUE extends BaseOpMode {
 
 		power = guardPowerByLimits(power, nowTicks);
 
-		turret.setPower(MOTOR_SIGN * power);
+		setTurretPowerLogical(power);
 	}
 
+	// LOGIC clamp
 	private int clampTicks(int t) {
 		int lo = turretMinTicks + TICKS_BUFFER;
 		int hi = turretMaxTicks - TICKS_BUFFER;
 		return Math.max(lo, Math.min(hi, t));
 	}
 
-	private double guardPowerByLimits(double pwr, int nowTicks) {
+	// LOGIC guard
+	private double guardPowerByLimits(double pwr, int nowTicksLogic) {
 		int lo = turretMinTicks + TICKS_BUFFER;
 		int hi = turretMaxTicks - TICKS_BUFFER;
 
-		if (nowTicks >= hi && pwr > 0) return 0.0;
-		if (nowTicks <= lo && pwr < 0) return 0.0;
+		if (nowTicksLogic >= hi && pwr > 0) return 0.0;
+		if (nowTicksLogic <= lo && pwr < 0) return 0.0;
 
 		return pwr;
 	}
@@ -628,15 +644,15 @@ public final class decodeBLUE extends BaseOpMode {
 		telemetry.addData("turretDesiredDeg", turretDesiredDeg_dbg);
 		telemetry.addData("turretCmdDeg", turretCmdDeg_dbg);
 
-		int nowTicks = robot.turret.getMotor().getCurrentPosition();
 		telemetry.addLine(" ");
-		telemetry.addData("TurretTicks", nowTicks);
+		telemetry.addData("TurretTicks RAW", robot.turret.getMotor().getCurrentPosition());
+		telemetry.addData("TurretTicks LOGIC", getTurretTicks());
 		telemetry.addData("TargetTicks", targetTicks);
 		telemetry.addData("MinTicks", turretMinTicks);
 		telemetry.addData("MaxTicks", turretMaxTicks);
 		telemetry.addData("degPerTick", degPerTick);
 		telemetry.addData("BUFFER", TICKS_BUFFER);
-		telemetry.addData("MOTOR_SIGN", MOTOR_SIGN);
+		telemetry.addData("TURRET_HW_SIGN", TURRET_HW_SIGN);
 
 		telemetry.addLine(" ");
 		telemetry.addData("Auto Shooter Angle", autoShooterAngle ? "ON" : "OFF");
