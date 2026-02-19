@@ -518,12 +518,12 @@ public final class decodeBLUE extends BaseOpMode {
 		double posNear = 0.54;
 		double posFar  = 0.47;
 
-		if (distanceCm >= 12.0) {
+		if (distanceCm >= 210) {
 			shooterTargetRpm = shooterTargetRpmFar;
 			return shooterPosition = posFar;
 		}
 
-		if (distanceCm >= 7.0) {
+		if (distanceCm >= 205) {
 			shooterTargetRpm = shooterTargetRpmNear;
 			return shooterPosition = posNear;
 		}
@@ -544,25 +544,46 @@ public final class decodeBLUE extends BaseOpMode {
 
 	private void ShooterAngle() {
 		if (autoShooterAngle) {
+
 			LLResult result = robot.limelight.getLatestResult();
 			if (result == null || !result.isValid()) return;
 
 			double ty = result.getTy();
 
-			double limelightMountAngleDegrees = 85.0;
-			double limelightLensHeightCm = 40.0;
-			double goalHeightCm = 105.0;
+			// ===== CONFIG REAL =====
+			final double MOUNT_DEG = 14.0;          // ce ai masurat in Onshape (fata de orizontala)
+			final double CAM_HEIGHT_CM = 28.5;      // centrul lentilei
+			final double GOAL_HEIGHT_CM = 75.0;     // centrul AprilTag
+			final double TY_SIGN = +1.0;            // daca distanta iese aiurea, schimba la +1
 
-			double angleToGoalRadians = Math.toRadians(limelightMountAngleDegrees + ty);
-			if (Math.abs(angleToGoalRadians) < 0.001) return;
+			double deltaH = GOAL_HEIGHT_CM - CAM_HEIGHT_CM;
 
-			double distanceCm = (goalHeightCm - limelightLensHeightCm) / Math.tan(angleToGoalRadians);
+			// ===== VARIANTA PRINCIPALA =====
+			double totalDeg = MOUNT_DEG + TY_SIGN * ty;
+			double totalRad = Math.toRadians(totalDeg);
+
+			if (Math.abs(Math.tan(totalRad)) < 1e-3) return;
+
+			double distanceCm = deltaH / Math.tan(totalRad);
+
+			// clamp de siguranta
+			distanceCm = clamp(distanceCm, 30.0, 500.0);
+
+			// ===== DEBUG IMPORTANT =====
+			double distPlus  = deltaH / Math.tan(Math.toRadians(MOUNT_DEG + ty));
+			double distMinus = deltaH / Math.tan(Math.toRadians(MOUNT_DEG - ty));
+
+			telemetry.addLine("---- LL DIST DEBUG ----");
+			telemetry.addData("ty", ty);
+			telemetry.addData("MountDeg", MOUNT_DEG);
+			telemetry.addData("TotalUsedDeg", totalDeg);
+			telemetry.addData("DistUsed", distanceCm);
+			telemetry.addData("Dist(mount+ty)", distPlus);
+			telemetry.addData("Dist(mount-ty)", distMinus);
 
 			shooterPosition = shooterAngleFromDistanceCm(distanceCm);
 
-			if (shooterPosition < 0.0) shooterPosition = 0.0;
-			if (shooterPosition > 1.0) shooterPosition = 1.0;
-
+			shooterPosition = clamp(shooterPosition, 0.0, 1.0);
 			robot.turretTumbler.setPosition(shooterPosition);
 			return;
 		}
@@ -571,11 +592,11 @@ public final class decodeBLUE extends BaseOpMode {
 		if (Math.abs(input) < SHOOTER_DEADZONE) return;
 
 		shooterPosition += input * 0.01;
-		if (shooterPosition < 0.0) shooterPosition = 0.0;
-		if (shooterPosition > 1.0) shooterPosition = 1.0;
+		shooterPosition = clamp(shooterPosition, 0.0, 1.0);
 
 		robot.turretTumbler.setPosition(shooterPosition);
 	}
+
 
 	// ================= INTAKE =================
 	private void Intake() {
