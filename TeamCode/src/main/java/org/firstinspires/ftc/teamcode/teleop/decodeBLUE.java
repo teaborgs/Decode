@@ -180,11 +180,15 @@ public final class decodeBLUE extends BaseOpMode {
 
 	private double shooterTargetRpm = 4500;
 	private final double shooterTargetRpmNear = 3850;
-	private final double shooterTargetRpmFar  = 4800;
+	private final double shooterTargetRpmFar  = 4400;
 
 	// ================= SHOOTER ANGLE =================
 	private static final double SHOOTER_DEADZONE = 0.15;
 	private double shooterPosition = 0.5;
+
+	// ===== LL distance memory =====
+	private double lastDistance = 0.0;
+	private boolean hasLastDistance = false;
 
 	private boolean autoShooterAngle = true;
 	private boolean prevAutoShooterKeyPressed = false;
@@ -518,28 +522,39 @@ public final class decodeBLUE extends BaseOpMode {
 		double posNear = 0.54;
 		double posFar  = 0.47;
 
-		if (distanceCm >= 210) {
+
+		if (distanceCm >= 270) {
 			shooterTargetRpm = shooterTargetRpmFar;
 			return shooterPosition = posFar;
 		}
 
-		if (distanceCm >= 205) {
-			shooterTargetRpm = shooterTargetRpmNear;
-			return shooterPosition = posNear;
+		if (distanceCm >= 190) {
+			shooterTargetRpm = 3700;
+			return shooterPosition = 0.28;
 		}
 
-		if (distanceCm >= 4.0) {
-			shooterTargetRpm = shooterTargetRpmNear;
+		if (distanceCm >= 90) {
+			shooterTargetRpm = 3300;
+			return shooterPosition = 0.12;
+		}
+
+		if (distanceCm >= 220) {
+			shooterTargetRpm = 3900;
 			return shooterPosition = 0.54;
 		}
 
-		if (distanceCm >= -1.0) {
-			shooterTargetRpm = shooterTargetRpmNear;
-			return shooterPosition = 0.54;
+		LLResult result = robot.limelight.getLatestResult();
+
+		if ((result == null || !result.isValid())
+				&& hasLastDistance
+				&& lastDistance < 95) {
+
+			shooterTargetRpm = 2500;
+			return shooterPosition = 0.12;
 		}
 
-		shooterTargetRpm = 4500;
-		return shooterPosition = 0.75;
+		shooterTargetRpm = 2500;
+		return shooterPosition = 0.12;
 	}
 
 	private void ShooterAngle() {
@@ -566,8 +581,13 @@ public final class decodeBLUE extends BaseOpMode {
 
 			double distanceCm = deltaH / Math.tan(totalRad);
 
+
 			// clamp de siguranta
 			distanceCm = clamp(distanceCm, 30.0, 500.0);
+
+			// SAVE last valid distance
+			lastDistance = distanceCm;
+			hasLastDistance = true;
 
 			// ===== DEBUG IMPORTANT =====
 			double distPlus  = deltaH / Math.tan(Math.toRadians(MOUNT_DEG + ty));

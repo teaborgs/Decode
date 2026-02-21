@@ -1,7 +1,7 @@
 package org.firstinspires.ftc.teamcode.autonomous.Auto_Blue;
 
-import static org.firstinspires.ftc.teamcode.Utilities.RunInParallel;
 import static org.firstinspires.ftc.teamcode.Utilities.RunSequentially;
+import static org.firstinspires.ftc.teamcode.Utilities.RunInParallel;
 import static org.firstinspires.ftc.teamcode.Utilities.WaitFor;
 
 import com.acmerobotics.roadrunner.AccelConstraint;
@@ -28,19 +28,19 @@ public class Auto_BLUE_Far_9 extends BaseOpMode {
 	private RobotHardware robot;
 
 	private static final int AUTON_TURRET_TICKS = 20;
-	private static final double AUTON_SHOOTER_POS = 0.47;
+	private static final double AUTON_SHOOTER_POS = 0.44;
 	private static final double TURRET_HOLD_POWER = 0.1;
 	private static final double SHOOT_SAFE_IN = 8.0;
 	private static final double SHOOT_SAFE_IN_2 = 15.0;
 	private static final double SHOOT_SAFE_IN_START = 2.5;
 
-	// NEW: shooting timing
-	private static final double SHOOT_BUILDUP_SEC = 1.0; // build-up before feeding
-	private static final double SHOOT_BURST_SEC = 3.0;   // continuous feed duration
-
 	private boolean shooterEnabled = false;
-	private double shooterRpmCmd = 4800;
+	private double shooterRpmCmd = 4500;
 	private boolean autonDone = false;
+
+	// ===== Shooter debug timing =====
+	private long shooterOnMs = -1;
+	private int shootBurstIndex = 0;
 
 	@Override
 	protected void OnInitialize() {
@@ -58,8 +58,7 @@ public class Auto_BLUE_Far_9 extends BaseOpMode {
 		turretHoldCurrent(TURRET_HOLD_POWER);
 	}
 
-	@Override
-	protected void jOnInitialize() {}
+	@Override protected void jOnInitialize() {}
 
 	private void turretHoldCurrent(double holdPower) {
 		DcMotorEx turret = robot.turret.getMotor();
@@ -76,16 +75,41 @@ public class Auto_BLUE_Far_9 extends BaseOpMode {
 	}
 
 	private Action newAimTurretLL() {
-		return new AimTurretWithLimelightAction(this, robot, 0.035,
-				0.07,
-				0.5,
-				0.30,
-				750,
-				1.0,
-				TURRET_HOLD_POWER);
+		return new AimTurretWithLimelightAction(this, robot, 0.035, 0.07, 0.5, 0.30, 750, 1.0, TURRET_HOLD_POWER);
+	}
+	private Action newAimTurretLLNEW() {
+		return new AimTurretWithLimelightAction(this, robot, 0.035, 0.07, 0.5, 0.30, 750, 1.0, TURRET_HOLD_POWER);
 	}
 	private Action newAimTurretLLSecond() { return newAimTurretLL(); }
 	private Action newAimTurretLLFinal() { return newAimTurretLL(); }
+
+	/** Wait până când avgRPM e aproape de target (ca în TeleOp), cu timeout. */
+	private Action waitUntilShooterRpm(double targetRpm, double tolRpm, long timeoutMs) {
+		return new Action() {
+			boolean init = false;
+			long start;
+
+			@Override
+			public boolean run(com.acmerobotics.dashboard.telemetry.TelemetryPacket packet) {
+				if (!init) {
+					init = true;
+					start = System.currentTimeMillis();
+				}
+				if (System.currentTimeMillis() - start >= timeoutMs) return false;
+
+				double r1 = robot.outtake1.getRpm();
+				double r2 = robot.outtake2.getRpm();
+				double avg = (r1 + r2) / 2.0;
+
+				packet.put("WAIT target", targetRpm);
+				packet.put("WAIT avg", avg);
+				packet.put("WAIT err", targetRpm - avg);
+				packet.put("WAIT tol", tolRpm);
+
+				return avg < targetRpm - tolRpm;
+			}
+		};
+	}
 
 	private static class AimTurretWithLimelightAction implements Action {
 		private final Auto_BLUE_Far_9 op;
@@ -113,20 +137,31 @@ public class Auto_BLUE_Far_9 extends BaseOpMode {
 				robot.turret.getMotor().setPower(0);
 			}
 
+			packet.put("TurretAim active", true);
+			packet.put("TurretAim timeMs", System.currentTimeMillis() - start);
+
 			if (System.currentTimeMillis() - start >= timeout) {
 				op.turretHoldCurrent(hold);
+				packet.put("TurretAim done", "TIMEOUT");
 				return false;
 			}
 
 			LLResult r = robot.limelight.getLatestResult();
-			if (r == null || !r.isValid()) {
+			boolean valid = (r != null && r.isValid());
+			packet.put("LL valid", valid);
+
+			if (!valid) {
 				robot.turret.getMotor().setPower(0);
+				packet.put("TurretAim done", "NO_LL");
 				return true;
 			}
 
 			double tx = r.getTx();
+			packet.put("LL tx", tx);
+
 			if (Math.abs(tx) <= lockDeg) {
 				op.turretHoldCurrent(hold);
+				packet.put("TurretAim done", "LOCK");
 				return false;
 			}
 
@@ -134,6 +169,8 @@ public class Auto_BLUE_Far_9 extends BaseOpMode {
 			p = Math.max(Math.min(p, maxPower), -maxPower);
 			if (p > 0) p = Math.max(p, minPower);
 			else p = Math.min(p, -minPower);
+
+			packet.put("TurretPwr", p);
 
 			robot.turret.getMotor().setPower(p);
 			return true;
@@ -189,23 +226,58 @@ public class Auto_BLUE_Far_9 extends BaseOpMode {
 		Action backToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUPL)
 				.splineToConstantHeading(
 						new Vector2d(WAYPOINTS_BLUE_FAR.SHOOT.position.x + SHOOT_SAFE_IN_2,
-								WAYPOINTS_BLUE_FAR.SHOOT.position.y + SHOOT_SAFE_IN_START),
+								WAYPOINTS_BLUE_FAR.SHOOT.position.y - SHOOT_SAFE_IN_START),
 						WAYPOINTS_BLUE_FAR.SHOOT.heading.toDouble()).build();
 
+		// ===== Always-running shooter controller + TELEMETRY =====
 		Action shooterController = packet -> {
 			if (autonDone) return false;
+
+			packet.put("PoseX", robot.drivetrain.pose.position.x);
+			packet.put("PoseY", robot.drivetrain.pose.position.y);
+			packet.put("PoseHdeg", Math.toDegrees(robot.drivetrain.pose.heading.log()));
+
 			if (shooterEnabled) {
 				robot.outtake1.setRpm(shooterRpmCmd);
 				robot.outtake2.setRpm(shooterRpmCmd);
 			}
+
+			double r1 = robot.outtake1.getRpm();
+			double r2 = robot.outtake2.getRpm();
+			double avg = (r1 + r2) / 2.0;
+
+			packet.put("Shooter Enabled", shooterEnabled);
+			packet.put("Shooter TargetRPM", shooterRpmCmd);
+			packet.put("OT1 RPM", r1);
+			packet.put("OT2 RPM", r2);
+			packet.put("AVG RPM", avg);
+			packet.put("RPM Error", shooterRpmCmd - avg);
+			packet.put("Shooter READY", avg >= shooterRpmCmd - 150);
+
+			packet.put("PWR OT1", robot.outtake1.raw().getPower());
+			packet.put("PWR OT2", robot.outtake2.raw().getPower());
+
+			if (shooterOnMs > 0) packet.put("Shooter ON ms", System.currentTimeMillis() - shooterOnMs);
+
+			LLResult ll = robot.limelight.getLatestResult();
+			boolean llValid = (ll != null && ll.isValid());
+			packet.put("LL valid", llValid);
+			if (llValid) packet.put("LL tx", ll.getTx());
+
+			packet.put("Burst idx", shootBurstIndex);
+
 			return true;
 		};
 
 		Action shooter_on = packet -> {
-			shooterRpmCmd = 4800;
+			shooterRpmCmd = 4700;
 			shooterEnabled = true;
+			shooterOnMs = System.currentTimeMillis();
+
 			robot.intakeStopper.setDestination(TumblerSystem.TumblerDestination.TRANSFER);
 			turretHoldCurrent(TURRET_HOLD_POWER);
+
+			packet.put("EVENT", "shooter_on");
 			return false;
 		};
 
@@ -214,25 +286,30 @@ public class Auto_BLUE_Far_9 extends BaseOpMode {
 			robot.outtake1.stop();
 			robot.outtake2.stop();
 			robot.intakeStopper.setDestination(TumblerSystem.TumblerDestination.IDLE);
+
+			packet.put("EVENT", "shooter_off");
 			return false;
 		};
 
 		Action shootArtifact = packet -> {
+			shootBurstIndex++;
 			robot.intake.setIntakeDirection(IntakeSystem.IntakeDirection.FORWARD);
 			robot.transfer.setPower(-1);
+			packet.put("EVENT", "shootArtifact");
 			return false;
 		};
 
 		Action stopShooting = packet -> {
 			robot.intake.setIntakeDirection(IntakeSystem.IntakeDirection.STOP);
 			robot.transfer.setPower(0);
+			packet.put("EVENT", "stopShooting");
 			return false;
 		};
 
-		Action startIntake = packet -> { robot.intake.setIntakeDirection(IntakeSystem.IntakeDirection.FORWARD); return false; };
-		Action stopIntake = packet -> { robot.intake.setIntakeDirection(IntakeSystem.IntakeDirection.STOP); return false; };
+		Action startIntake = packet -> { robot.intake.setIntakeDirection(IntakeSystem.IntakeDirection.FORWARD); packet.put("EVENT", "startIntake"); return false; };
+		Action stopIntake  = packet -> { robot.intake.setIntakeDirection(IntakeSystem.IntakeDirection.STOP); packet.put("EVENT", "stopIntake"); return false; };
 
-		Action setAutonShooterAngle = packet -> { robot.turretTumbler.setPosition(AUTON_SHOOTER_POS); return false; };
+		Action setAutonShooterAngle = packet -> { robot.turretTumbler.setPosition(AUTON_SHOOTER_POS); packet.put("EVENT", "setShooterAngle"); return false; };
 
 		Actions.runBlocking(
 				RunInParallel(
@@ -241,16 +318,18 @@ public class Auto_BLUE_Far_9 extends BaseOpMode {
 
 								RunInParallel(shooter_on, goToShoot),
 
+								waitUntilShooterRpm(4500, 150, 700),
+
 								newAimTurretLL(),
 								setAutonShooterAngle,
 
-								// NEW shooting: 1s build-up then 3s continuous feed
-								WaitFor(SHOOT_BUILDUP_SEC),
-								shootArtifact, WaitFor(SHOOT_BURST_SEC), stopShooting,
+								// burst 1
+								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
+								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
+								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
+								WaitFor(1.2),
 
-								WaitFor(0.2),
-								shooter_off,
-								WaitFor(0.2),
+								stopShooting, shooter_off, WaitFor(0.2),
 
 								backToStart,
 								startIntake, WaitFor(0.1),
@@ -258,31 +337,43 @@ public class Auto_BLUE_Far_9 extends BaseOpMode {
 								stopIntake,
 
 								RunInParallel(HumanToStart, shooter_on),
+
+								waitUntilShooterRpm(4700, 150, 700),
+
 								newAimTurretLLSecond(),
 								setAutonShooterAngle,
 
-								// NEW shooting: 1s build-up then 3s continuous feed
-								WaitFor(SHOOT_BUILDUP_SEC),
-								shootArtifact, WaitFor(SHOOT_BURST_SEC), stopShooting,
-
+								// burst 2
+								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
+								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
+								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
+								WaitFor(1.2),
 								shooter_off,
+								stopShooting,
 
 								startIntake, WaitFor(0.2),
 								goToPickup, WaitFor(0.15),
 								goToPickupL, WaitFor(0.2),
-								stopIntake, WaitFor(0.1),
+								stopIntake, WaitFor(0.5),
 
 								RunInParallel(backToShoot, shooter_on),
-								newAimTurretLLFinal(),
+
+								waitUntilShooterRpm(4800, 150, 700),
+
+								newAimTurretLLNEW(),
 								setAutonShooterAngle,
 
-								// NEW shooting: 1s build-up then 3s continuous feed
-								WaitFor(SHOOT_BUILDUP_SEC),
-								shootArtifact, WaitFor(SHOOT_BURST_SEC), stopShooting,
-
+								// burst 3
+								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
+								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
+								shootArtifact, WaitFor(0.3), stopShooting, WaitFor(0.25),
+								WaitFor(1.2),
+								stopShooting,
 								shooter_off
 						)
 				)
 		);
+
+		autonDone = true;
 	}
 }

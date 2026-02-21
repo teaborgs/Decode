@@ -25,10 +25,10 @@ public class Auto_RED_Close_12GATE extends BaseOpMode {
 
 	// === TUNE THESE ===
 	private static final int AUTON_TURRET_TICKS = 20;      // tune this
-	private static final double AUTON_SHOOTER_POS = 0.54;  // tune this
-	private static final double AUTON_SHOOTER_POS_SECOND = 0.54;
-	private static final double AUTON_SHOOTER_POS_THIRD = 0.54;
-	private static final double AUTON_SHOOTER_POS_FINAL = 0.54;
+	private static final double AUTON_SHOOTER_POS = 0.28;  // tune this
+	private static final double AUTON_SHOOTER_POS_SECOND = 0.28;
+	private static final double AUTON_SHOOTER_POS_THIRD = 0.28;
+	private static final double AUTON_SHOOTER_POS_FINAL = 0.28;
 	private static final double TURRET_HOLD_POWER = 0.1;  // tune 0.05–0.20
 	private static final double SHOOT_SAFE_IN = 11.0;
 
@@ -42,6 +42,7 @@ public class Auto_RED_Close_12GATE extends BaseOpMode {
 		robot = new RobotHardware(hardwareMap);
 		robot.init();
 		robot.limelight.pipelineSwitch(1);
+		robot.drivetrain.pose = WAYPOINTS_RED_CLOSE_EXP.START;
 
 		// shooter rpm config
 		OuttakeSystem.TICKS_PER_REV = 28;
@@ -88,7 +89,7 @@ public class Auto_RED_Close_12GATE extends BaseOpMode {
 				0.40,    // maxPower
 				0.45,    // lockThreshold degrees
 				750,     // timeout ms
-				-1.0,    // directionSign
+				1.0,    // directionSign
 				TURRET_HOLD_POWER
 		);
 	}
@@ -102,7 +103,7 @@ public class Auto_RED_Close_12GATE extends BaseOpMode {
 				0.40,    // maxPower
 				0.45,    // lockThreshold degrees
 				750,     // timeout ms
-				-1.0,    // directionSign
+				1.0,    // directionSign
 				TURRET_HOLD_POWER
 		);
 	}
@@ -116,7 +117,7 @@ public class Auto_RED_Close_12GATE extends BaseOpMode {
 				0.40,
 				0.45,
 				750,
-				-1.0,
+				1.0,
 				TURRET_HOLD_POWER
 		);
 	}
@@ -131,7 +132,7 @@ public class Auto_RED_Close_12GATE extends BaseOpMode {
 				0.45,
 				0.70,
 				750,
-				-1.0,
+				1.0,
 				TURRET_HOLD_POWER
 		);
 	}
@@ -236,116 +237,162 @@ public class Auto_RED_Close_12GATE extends BaseOpMode {
 		}
 	}
 
+	private interface ActionFactory {
+		Action build();
+	}
+
+	private static class DeferredAction implements Action {
+		private final ActionFactory factory;
+		private Action built;
+
+		DeferredAction(ActionFactory factory) {
+			this.factory = factory;
+		}
+
+		@Override
+		public boolean run(com.acmerobotics.dashboard.telemetry.TelemetryPacket packet) {
+			if (built == null) {
+				built = factory.build(); // build fix acum, cu pose-ul actual
+			}
+			return built.run(packet);
+		}
+	}
+
+	private Action defer(ActionFactory f) {
+		return new DeferredAction(f);
+	}
+
 	@Override
 	protected void OnRun() {
 		robot.drivetrain.updatePoseEstimate();
 
-		/// === PATH ACTIONS ===
+		/// === PATH ACTIONS (DEFERRED: build at runtime from current pose) ===
 
-		Action startToShootBack =
-				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.START)
+		Action startToShootBack = defer(() ->
+				robot.drivetrain.actionBuilder(robot.drivetrain.pose)
 						.strafeTo(new Vector2d(
 								WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.x,
 								WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.y
 						))
-						.build();
+						.build()
+		);
 
-		Action shootToPickup1 =
-				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.SHOOT)
+		Action shootToPickup1 = defer(() ->
+				robot.drivetrain.actionBuilder(robot.drivetrain.pose)
 						.strafeTo(new Vector2d(
 								WAYPOINTS_RED_CLOSE_EXP.PICKUP1.position.x,
 								WAYPOINTS_RED_CLOSE_EXP.PICKUP1.position.y
 						))
-						.build();
+						.build()
+		);
 
-		Action pickup1ToShoot =
-				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.PICKUP1)
+		Action pickup1ToShoot = defer(() ->
+				robot.drivetrain.actionBuilder(robot.drivetrain.pose)
 						.strafeTo(new Vector2d(
 								WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.x + SHOOT_SAFE_IN,
 								WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.y
 						))
-						.build();
+						.build()
+		);
 
-		Action shootToPickup2S =
-				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.SHOOT)
+		Action shootToPickup2S = defer(() ->
+				robot.drivetrain.actionBuilder(robot.drivetrain.pose)
 						.strafeTo(new Vector2d(
 								WAYPOINTS_RED_CLOSE_EXP.PICKUP2S.position.x,
 								WAYPOINTS_RED_CLOSE_EXP.PICKUP2S.position.y
 						))
-						.build();
+						.build()
+		);
 
-		Action pickup2SToPickup2 =
-				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.PICKUP2S)
+		Action pickup2SToPickup2 = defer(() ->
+				robot.drivetrain.actionBuilder(robot.drivetrain.pose)
 						.strafeTo(new Vector2d(
 								WAYPOINTS_RED_CLOSE_EXP.PICKUP2.position.x,
 								WAYPOINTS_RED_CLOSE_EXP.PICKUP2.position.y
 						))
-						.build();
+						.build()
+		);
 
-		Action pickup2ToShoot =
-				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.PICKUP2)
-						.strafeTo(new Vector2d(
-								WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.x + SHOOT_SAFE_IN,
-								WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.y
-						))
-						.build();
+// Tangenta calculata pentru PICKUP2 -> (SHOOT.x + 11, SHOOT.y): ~2.532 rad
+		Action pickup2ToShoot = defer(() -> {
+			double BACK_FIRST = 6.0; // tune: 4..10
 
-		Action shootTopickup3S =
-				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.SHOOT)
+			double currentX = robot.drivetrain.pose.position.x;
+
+			return robot.drivetrain.actionBuilder(robot.drivetrain.pose)
+					.lineToXConstantHeading(currentX - BACK_FIRST) // merge drept in spate
+					.splineToConstantHeading(
+							new Vector2d(
+									WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.x + SHOOT_SAFE_IN,
+									WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.y
+							),
+							2.532
+					)
+					.build();
+		});
+
+		Action shootTopickup3S = defer(() ->
+				robot.drivetrain.actionBuilder(robot.drivetrain.pose)
 						.strafeTo(new Vector2d(
 								WAYPOINTS_RED_CLOSE_EXP.PICKUP3S.position.x,
 								WAYPOINTS_RED_CLOSE_EXP.PICKUP3S.position.y
 						))
-						.build();
+						.build()
+		);
 
-		Action pickup3SToPickup3 =
-				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.PICKUP3S)
+		Action pickup3SToPickup3 = defer(() ->
+				robot.drivetrain.actionBuilder(robot.drivetrain.pose)
 						.strafeTo(new Vector2d(
 								WAYPOINTS_RED_CLOSE_EXP.PICKUP3.position.x,
 								WAYPOINTS_RED_CLOSE_EXP.PICKUP3.position.y
 						))
-						.build();
+						.build()
+		);
 
-		Action pickup3ToShoot =
-				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.PICKUP3)
+		Action pickup3ToShoot = defer(() ->
+				robot.drivetrain.actionBuilder(robot.drivetrain.pose)
 						.strafeTo(new Vector2d(
 								WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.x + SHOOT_SAFE_IN,
 								WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.y
 						))
-						.build();
+						.build()
+		);
 
-		Action pickupToOpengateS =
-				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.PICKUP1)
+		Action pickupToOpengateS = defer(() ->
+				robot.drivetrain.actionBuilder(robot.drivetrain.pose)
 						.strafeTo(new Vector2d(
 								WAYPOINTS_RED_CLOSE_EXP.OPENGATES.position.x,
 								WAYPOINTS_RED_CLOSE_EXP.OPENGATES.position.y
 						))
-						.build();
+						.build()
+		);
 
-		Action opengateSToOpengate =
-				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.OPENGATES)
+		Action opengateSToOpengate = defer(() ->
+				robot.drivetrain.actionBuilder(robot.drivetrain.pose)
 						.strafeTo(new Vector2d(
 								WAYPOINTS_RED_CLOSE_EXP.OPENGATE.position.x,
 								WAYPOINTS_RED_CLOSE_EXP.OPENGATE.position.y
 						))
-						.build();
+						.build()
+		);
 
-		Action opengateToShoot =
-				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.OPENGATE)
+		Action opengateToShoot = defer(() ->
+				robot.drivetrain.actionBuilder(robot.drivetrain.pose)
 						.strafeTo(new Vector2d(
 								WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.x,
 								WAYPOINTS_RED_CLOSE_EXP.SHOOT.position.y
 						))
-						.build();
+						.build()
+		);
 
-		Action finishline =
-				robot.drivetrain.actionBuilder(WAYPOINTS_RED_CLOSE_EXP.SHOOT)
+		Action finishline = defer(() ->
+				robot.drivetrain.actionBuilder(robot.drivetrain.pose)
 						.strafeTo(new Vector2d(
 								WAYPOINTS_RED_CLOSE_EXP.OPENGATES.position.x - SHOOT_SAFE_IN,
 								WAYPOINTS_RED_CLOSE_EXP.OPENGATES.position.y
 						))
-						.build();
-
+						.build()
+		);
 		/// === SHOOTER AND INTAKE ACTIONS ===
 
 		// Background controller: ține PID-ul alive tot auton-ul
@@ -360,7 +407,7 @@ public class Auto_RED_Close_12GATE extends BaseOpMode {
 		};
 
 		Action shooter_on = packet -> {
-			shooterRpmCmd = 4000;
+			shooterRpmCmd = 3300;
 			shooterEnabled = true;
 			robot.intakeStopper.setDestination(TumblerSystem.TumblerDestination.TRANSFER);
 			turretHoldCurrent(TURRET_HOLD_POWER);
