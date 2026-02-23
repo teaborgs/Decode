@@ -413,32 +413,28 @@ public class Auto_BLUE_Close_3 extends BaseOpMode {
 		};
 
 		/// === FULL AUTON SEQUENCE ===
-		Actions.runBlocking(
-				RunInParallel(
-						shooterController, // IMPORTANT: ține RPM loop-ul viu
-						RunSequentially(
+	Actions.runBlocking(
+			RunInParallel(
+					shooterController,
+					RunSequentially(
 
-								RunInParallel(
-										startToShootBack,
-										WaitFor(0.1),
-										shooter_on
-								),
+							RunInParallel(
+									startToShootBack,
+									WaitFor(0.1),
+									shooter_on
+							),
 
-								setAutonShooterAngle,
-								newAimTurretLL(),
-								WaitFor(0.1),
-								shootArtifact,
-								WaitFor(1.0),
-								stopShooting,
-								shooter_off,
-								WaitFor(0.5),
-								leave
-
-
-
-
-						)
-				)
-		);
+							setAutonShooterAngle,
+							newAimTurretLL(),
+							WaitFor(0.1),
+							shootArtifact,
+							WaitFor(1.0),
+							stopShooting,
+							shooter_off,
+							WaitFor(0.5),
+							leave
+					)
+			)
+	);
 	}
 }

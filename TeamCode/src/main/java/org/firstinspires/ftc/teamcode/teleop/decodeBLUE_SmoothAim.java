@@ -17,8 +17,8 @@ import org.firstinspires.ftc.teamcode.systems.IntakeSystem.IntakeDirection;
 import org.firstinspires.ftc.teamcode.systems.OuttakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@TeleOp(name = "🔵🔵decodeaza-mi-l🔵🔵", group = "TeleOp")
-public final class decodeBLUE extends BaseOpMode {
+@TeleOp(name = "🔵🔵decodev2🔵", group = "TeleOp")
+public final class decodeBLUE_SmoothAim extends BaseOpMode {
 	private InputSystem driveInput, armInput;
 
 	private RobotHardware robot;
@@ -105,7 +105,7 @@ public final class decodeBLUE extends BaseOpMode {
 	// ===== PID in ticks (LL aggressive) =====
 	private static final double kP_LL = 0.0060;
 	private static final double kD_LL = 0.0012;
-	private static final double MAX_POWER_LL = 0.60;
+	private static final double MAX_POWER_LL = 0.70;
 
 	// ===== turret ticks limits (LOGICE) =====
 	// Acestea rămân “cum le-ai calibrat tu” în coordonata logică.
@@ -117,12 +117,6 @@ public final class decodeBLUE extends BaseOpMode {
 	// ==========================================================
 	// UNICUL LOC unde reparăm semnul la putere + semnul la encoder
 	// ==========================================================
-	//
-	// Dacă în TurretSystem ai setDirection(REVERSE) (cum e acum în codul tău),
-	// atunci HW_SIGN trebuie să fie -1 ca “logica” să rămână consistentă.
-	//
-	// Dacă vei schimba TurretSystem pe FORWARD, pune HW_SIGN = +1.
-	//
 	private static final int TURRET_HW_SIGN = 1;
 
 	private int getTurretTicks() {
@@ -147,6 +141,10 @@ public final class decodeBLUE extends BaseOpMode {
 
 	// Semnul de “tx -> stânga/dreapta” (dacă LL se duce invers, schimbă aici)
 	private static final double LL_TURN_SIGN = +1.0;
+
+	// ===== Dynamic limit corridor (anti-zbatere la capete) =====
+	private static final int LIMIT_ZONE_TICKS   = 90;
+	private static final int LIMIT_WINDOW_TICKS = 80;
 
 	// ===== State =====
 	private boolean autoAim = false;
@@ -446,10 +444,29 @@ public final class decodeBLUE extends BaseOpMode {
 		turretCmdDeg_dbg = turretCmdDeg;
 
 		// ======================
-		// (D) deg -> ticks target
+		// (D) deg -> ticks target + dynamic corridor near limits (LOGIC)
 		// ======================
 		int unclamped = (int) Math.round(turretCmdDeg / degPerTick);
-		targetTicks = clampTicks(unclamped); // LOGIC target ticks
+		int desiredTicks = clampTicks(unclamped);
+
+		int lo = turretMinTicks + TICKS_BUFFER;
+		int hi = turretMaxTicks - TICKS_BUFFER;
+
+		int nowTicksLim = getTurretTicks();
+
+		if (nowTicksLim > (hi - LIMIT_ZONE_TICKS)) {
+			int minAllowed = hi - LIMIT_WINDOW_TICKS;
+			int maxAllowed = hi;
+			desiredTicks = Math.max(minAllowed, Math.min(maxAllowed, desiredTicks));
+		}
+
+		if (nowTicksLim < (lo + LIMIT_ZONE_TICKS)) {
+			int minAllowed = lo;
+			int maxAllowed = lo + LIMIT_WINDOW_TICKS;
+			desiredTicks = Math.max(minAllowed, Math.min(maxAllowed, desiredTicks));
+		}
+
+		targetTicks = desiredTicks;
 
 		// ======================
 		// (E) PID in ticks + hard guard (ALL LOGIC)
@@ -519,7 +536,6 @@ public final class decodeBLUE extends BaseOpMode {
 		double posNear = 0.54;
 		double posFar  = 0.47;
 
-
 		if (distanceCm >= 270) {
 			shooterTargetRpm = shooterTargetRpmFar;
 			return shooterPosition = posFar;
@@ -578,7 +594,6 @@ public final class decodeBLUE extends BaseOpMode {
 
 			double distanceCm = deltaH / Math.tan(totalRad);
 
-
 			// clamp de siguranta
 			distanceCm = clamp(distanceCm, 30.0, 500.0);
 
@@ -613,7 +628,6 @@ public final class decodeBLUE extends BaseOpMode {
 
 		robot.turretTumbler.setPosition(shooterPosition);
 	}
-
 
 	// ================= INTAKE =================
 	private void Intake() {
