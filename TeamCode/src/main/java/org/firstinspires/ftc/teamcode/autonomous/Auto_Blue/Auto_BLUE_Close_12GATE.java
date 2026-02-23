@@ -393,6 +393,8 @@ public class Auto_BLUE_Close_12GATE extends BaseOpMode {
 						.build()
 		);
 
+
+
 		/// === SHOOTER AND INTAKE ACTIONS ===
 
 		// Background controller: ține PID-ul alive tot auton-ul
@@ -452,12 +454,28 @@ public class Auto_BLUE_Close_12GATE extends BaseOpMode {
 			return false;
 		};
 
+		Action turretToTicks = robot.turret.goToTicksAction(
+				212, // target
+				0.6,                // power (0..1)
+				8,                  // toleranta ticks
+				1200,               // timeout ms
+				TURRET_HOLD_POWER   // hold power dupa ce ajunge
+		);
+
+		Action turretHomeReset = robot.turret.goToZeroAndResetAction(
+				0.6,                // power
+				8,                  // toleranta
+				1500,               // timeout ms
+				TURRET_HOLD_POWER   // hold power
+		);
+
 		/// === FULL AUTON SEQUENCE ===
 		Actions.runBlocking(
 				RunInParallel(
 						shooterController, // IMPORTANT: ține RPM loop-ul viu
 						RunSequentially(
 
+								turretToTicks,
 								RunInParallel(
 										startToShootBack,
 										WaitFor(0.1),
@@ -542,6 +560,7 @@ public class Auto_BLUE_Close_12GATE extends BaseOpMode {
 								shootArtifact,
 								WaitFor(1.0),
 
+								turretHomeReset,
 								finishline,
 
 								endAuton

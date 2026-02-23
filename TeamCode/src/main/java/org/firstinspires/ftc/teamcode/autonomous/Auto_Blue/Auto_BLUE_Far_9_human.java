@@ -191,9 +191,16 @@ public class Auto_BLUE_Far_9_human extends BaseOpMode {
 				.lineToY(WAYPOINTS_BLUE_FAR.SHOOT.position.y)
 				.build();
 
+		Action finishline = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.SHOOT)
+				.setTangent(Math.toRadians(90))
+				.lineToY(WAYPOINTS_BLUE_FAR.FINISHLINE.position.y)
+				.build();
+
+
+
 		AccelConstraint humanAccel = new ProfileAccelConstraint(
 				MecanumDrive.PARAMS.minProfileAccel,
-				25
+				35
 		);
 
 		Action HumanPark = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.START, humanAccel)
@@ -219,7 +226,7 @@ public class Auto_BLUE_Far_9_human extends BaseOpMode {
 
 		AccelConstraint pickupAccel = new ProfileAccelConstraint(
 				MecanumDrive.PARAMS.minProfileAccel,
-				20
+				30
 		);
 
 		Action goToPickupL = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUP, pickupAccel)
@@ -229,7 +236,7 @@ public class Auto_BLUE_Far_9_human extends BaseOpMode {
 
 		AccelConstraint backstartAccel = new ProfileAccelConstraint(
 				MecanumDrive.PARAMS.minProfileAccel,
-				10
+				20
 		);
 
 		Action backToStart = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.SHOOT, backstartAccel)
@@ -349,6 +356,21 @@ public class Auto_BLUE_Far_9_human extends BaseOpMode {
 			return false;
 		};
 
+		Action turretToTicks = robot.turret.goToTicksAction(
+				212, // target
+				0.6,                // power (0..1)
+				8,                  // toleranta ticks
+				1200,               // timeout ms
+				TURRET_HOLD_POWER   // hold power dupa ce ajunge
+		);
+
+		Action turretHomeReset = robot.turret.goToZeroAndResetAction(
+				0.6,                // power
+				8,                  // toleranta
+				1500,               // timeout ms
+				TURRET_HOLD_POWER   // hold power
+		);
+
 		Action startIntake = packet -> { robot.intake.setIntakeDirection(IntakeSystem.IntakeDirection.FORWARD); packet.put("EVENT", "startIntake"); return false; };
 		Action stopIntake  = packet -> { robot.intake.setIntakeDirection(IntakeSystem.IntakeDirection.STOP);    packet.put("EVENT", "stopIntake");  return false; };
 
@@ -360,12 +382,13 @@ public class Auto_BLUE_Far_9_human extends BaseOpMode {
 						shooterController,
 						RunSequentially(
 
+								turretToTicks,
 								// ===== SHOOT 1 =====
 								RunInParallel(
 										packet -> { shooterRpmCmd = 4800; return shooter_on.run(packet); },
 										goToShoot
 								),
-								waitUntilShooterRpm(4800, 150, 800),
+								waitUntilShooterRpm(4800, 150, 700),
 
 								newAimTurretLL(),
 								setAutonShooterAngle,
@@ -374,7 +397,7 @@ public class Auto_BLUE_Far_9_human extends BaseOpMode {
 								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
 								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
 								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
-								WaitFor(1.2),
+								WaitFor(1.0),
 
 								stopShooting,
 								shooter_off,
@@ -383,7 +406,7 @@ public class Auto_BLUE_Far_9_human extends BaseOpMode {
 								// ===== HUMAN CYCLE 1 =====
 								backToStart,
 								startIntake, WaitFor(0.1),
-								HumanPark, WaitFor(0.7),
+								HumanPark, WaitFor(0.6),
 								stopIntake,
 
 								// ===== SHOOT 2 =====
@@ -391,7 +414,7 @@ public class Auto_BLUE_Far_9_human extends BaseOpMode {
 										HumanToStart,
 										packet -> { shooterRpmCmd = 4800; return shooter_on.run(packet); }
 								),
-								waitUntilShooterRpm(4800, 150, 800),
+								waitUntilShooterRpm(4800, 150, 700),
 
 								newAimTurretLLSecond(),
 								setAutonShooterAngle,
@@ -400,7 +423,7 @@ public class Auto_BLUE_Far_9_human extends BaseOpMode {
 								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
 								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
 								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
-								WaitFor(1.2),
+								WaitFor(1.0),
 
 								stopShooting,
 								shooter_off,
@@ -409,7 +432,7 @@ public class Auto_BLUE_Far_9_human extends BaseOpMode {
 								// ===== HUMAN CYCLE 2 (pastrez cum ai tu) =====
 								backToStart2,
 								startIntake, WaitFor(0.2),
-								HumanPark2, WaitFor(0.7),
+								HumanPark2, WaitFor(0.6),
 								stopIntake, WaitFor(0.1),
 
 								// ===== SHOOT 3 =====
@@ -417,7 +440,7 @@ public class Auto_BLUE_Far_9_human extends BaseOpMode {
 										HumanToStart2,
 										packet -> { shooterRpmCmd = 4800; return shooter_on.run(packet); }
 								),
-								waitUntilShooterRpm(4800, 150, 800),
+								waitUntilShooterRpm(4800, 150, 700),
 
 								newAimTurretLLNEW(),
 								setAutonShooterAngle,
@@ -426,13 +449,14 @@ public class Auto_BLUE_Far_9_human extends BaseOpMode {
 								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
 								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
 								shootArtifact, WaitFor(0.30), stopShooting, WaitFor(0.25),
-								WaitFor(1.2),
+								WaitFor(1.0),
 
 								stopShooting,
 								shooter_off,
 
 								// ===== FINAL PARK (cum ai pus) =====
-								HumanPark3
+
+								RunInParallel(turretHomeReset, finishline)
 						)
 				)
 		);
