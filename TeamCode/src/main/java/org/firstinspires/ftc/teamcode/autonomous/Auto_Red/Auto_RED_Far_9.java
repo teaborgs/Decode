@@ -187,6 +187,10 @@ public class Auto_RED_Far_9 extends BaseOpMode {
 				.setTangent(Math.toRadians(90))
 				.lineToY(WAYPOINTS_RED_FAR.SHOOT.position.y).build();
 
+		Action finishline = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.SHOOT)
+				.setTangent(Math.toRadians(90))
+				.lineToY(WAYPOINTS_RED_FAR.FINISHLINE.position.y).build();
+
 		AccelConstraint humanAccel = new ProfileAccelConstraint(
 				MecanumDrive.PARAMS.minProfileAccel,
 				25
@@ -312,6 +316,21 @@ public class Auto_RED_Far_9 extends BaseOpMode {
 			return false;
 		};
 
+		Action turretToTicks = robot.turret.goToTicksAction(
+				-212, // target
+				0.6,                // power (0..1)
+				8,                  // toleranta ticks
+				1200,               // timeout ms
+				TURRET_HOLD_POWER   // hold power dupa ce ajunge
+		);
+
+		Action turretHomeReset = robot.turret.goToZeroAndResetAction(
+				0.6,                // power
+				8,                  // toleranta
+				1500,               // timeout ms
+				TURRET_HOLD_POWER   // hold power
+		);
+
 		Action startIntake = packet -> { robot.intake.setIntakeDirection(IntakeSystem.IntakeDirection.FORWARD); packet.put("EVENT", "startIntake"); return false; };
 		Action stopIntake = packet -> { robot.intake.setIntakeDirection(IntakeSystem.IntakeDirection.STOP); packet.put("EVENT", "stopIntake"); return false; };
 
@@ -322,6 +341,7 @@ public class Auto_RED_Far_9 extends BaseOpMode {
 						shooterController,
 						RunSequentially(
 
+								turretToTicks,
 								RunInParallel(shooter_on, goToShoot),
 
 								// așteaptă după RPM (ca în TeleOp), nu după timp fix
@@ -378,7 +398,8 @@ public class Auto_RED_Far_9 extends BaseOpMode {
 								shootArtifact, WaitFor(0.3), stopShooting, WaitFor(0.25),
 								WaitFor(1.2),
 								stopShooting,
-								shooter_off
+								shooter_off,
+								RunInParallel(turretHomeReset, finishline)
 						)
 				)
 		);

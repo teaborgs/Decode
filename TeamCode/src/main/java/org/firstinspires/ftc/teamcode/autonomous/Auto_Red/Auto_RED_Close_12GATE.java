@@ -434,6 +434,21 @@ public class Auto_RED_Close_12GATE extends BaseOpMode {
 			return false;
 		};
 
+		Action turretToTicks = robot.turret.goToTicksAction(
+				-212, // target
+				0.6,                // power (0..1)
+				8,                  // toleranta ticks
+				1200,               // timeout ms
+				TURRET_HOLD_POWER   // hold power dupa ce ajunge
+		);
+
+		Action turretHomeReset = robot.turret.goToZeroAndResetAction(
+				0.6,                // power
+				8,                  // toleranta
+				1500,               // timeout ms
+				TURRET_HOLD_POWER   // hold power
+		);
+
 		Action setAutonShooterAngle = packet -> { robot.turretTumbler.setPosition(AUTON_SHOOTER_POS); return false; };
 		Action setAutonShooterAngleSecond = packet -> { robot.turretTumbler.setPosition(AUTON_SHOOTER_POS_SECOND); return false; };
 		Action setAutonShooterAngleThird = packet -> { robot.turretTumbler.setPosition(AUTON_SHOOTER_POS_THIRD); return false; };
@@ -458,6 +473,7 @@ public class Auto_RED_Close_12GATE extends BaseOpMode {
 						shooterController, // IMPORTANT: ține RPM loop-ul viu
 						RunSequentially(
 
+								turretToTicks,
 								RunInParallel(
 										startToShootBack,
 										WaitFor(0.1),
@@ -544,6 +560,7 @@ public class Auto_RED_Close_12GATE extends BaseOpMode {
 
 								finishline,
 
+								turretHomeReset,
 								endAuton
 						)
 				)

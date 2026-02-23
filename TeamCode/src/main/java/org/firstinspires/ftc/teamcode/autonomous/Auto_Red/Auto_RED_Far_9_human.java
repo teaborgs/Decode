@@ -250,6 +250,10 @@ public class Auto_RED_Far_9_human extends BaseOpMode {
 				)
 				.build();
 
+		Action finishline = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.SHOOT)
+				.setTangent(Math.toRadians(90))
+				.lineToY(WAYPOINTS_RED_FAR.FINISHLINE.position.y).build();
+
 		// ===== SHOOTER / INTAKE (trage ca Far_9) =====
 
 		Action shooterController = packet -> {
@@ -325,6 +329,21 @@ public class Auto_RED_Far_9_human extends BaseOpMode {
 			return false;
 		};
 
+		Action turretToTicks = robot.turret.goToTicksAction(
+				-212, // target
+				0.6,                // power (0..1)
+				8,                  // toleranta ticks
+				1200,               // timeout ms
+				TURRET_HOLD_POWER   // hold power dupa ce ajunge
+		);
+
+		Action turretHomeReset = robot.turret.goToZeroAndResetAction(
+				0.6,                // power
+				8,                  // toleranta
+				1500,               // timeout ms
+				TURRET_HOLD_POWER   // hold power
+		);
+
 		Action startIntake = packet -> { robot.intake.setIntakeDirection(IntakeSystem.IntakeDirection.FORWARD); packet.put("EVENT", "startIntake"); return false; };
 		Action stopIntake  = packet -> { robot.intake.setIntakeDirection(IntakeSystem.IntakeDirection.STOP);    packet.put("EVENT", "stopIntake");  return false; };
 
@@ -335,6 +354,8 @@ public class Auto_RED_Far_9_human extends BaseOpMode {
 				RunInParallel(
 						shooterController,
 						RunSequentially(
+
+								turretToTicks,
 
 								// ===== SHOOT 1 =====
 								RunInParallel(
@@ -402,7 +423,8 @@ public class Auto_RED_Far_9_human extends BaseOpMode {
 								WaitFor(1.2),
 
 								stopShooting,
-								shooter_off
+								shooter_off,
+								RunInParallel(turretHomeReset, finishline)
 						)
 				)
 		);
