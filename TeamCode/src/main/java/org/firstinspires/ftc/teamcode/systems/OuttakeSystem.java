@@ -3,56 +3,67 @@ package org.firstinspires.ftc.teamcode.systems;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 public class OuttakeSystem {
-	private final DcMotorEx motor;
 
-	// goBILDA 6000RPM encoder intern
+	private final DcMotorEx motor;
+	private VoltageSensor voltageSensor = null;
+
 	public static double TICKS_PER_REV = 28;
 
-	// ===== TUNING (începe cu astea) =====
-	// kV = feedforward (aprox power per rpm). Dacă max real e ~5500 rpm la power=1,
-	// kV ~ 1/5500 = 0.0001818
-	public static double kV = 1.0 / 5000.0;
+	// ===== TUNING =====
+	public static double kV = 1.0 / 4700.0;
+	public static double kS = 0.03;
 
-	// PID pe eroare RPM (astea controlează cât de “agresiv” corectează)
-	public static double kP = 0.0010;
+	public static double kP = 0.0018;
 	public static double kI = 0.0;
-	public static double kD = 0.0003;
+	public static double kD = 0.0004;
 
-	// rampă pentru target ca să nu “șuteze” flywheel-ul
-	public static double RPM_SLEW = 6000; // rpm/sec
+	public static double RPM_SLEW = 20000;
 
-	// protecții
 	public static double MAX_POWER = 1.0;
-	public static double MIN_POWER = 0.0; // shooter de obicei nu vrei reverse aici
+	public static double MIN_POWER = 0.0;
 
-	// state
+	// ===== Kick =====
+	public static double KICK_PWR = 0.22;
+	public static double KICK_TIME_SEC = 0.22;
+	public static double KICK_ERR_RPM = 120;
+	public static double KICK_DROP_RPM_PER_S = 2000;
+	public static double KICK_MIN_CMD_RPM = 1800;
+
 	private double cmdRpm = 0;
 	private double integral = 0;
 	private double lastErr = 0;
 	private long lastNs = 0;
+
+	private double lastRpm = 0;
+	private long kickUntilNs = 0;
 
 	public OuttakeSystem(DcMotorEx motor, DcMotorSimple.Direction direction) {
 		this.motor = motor;
 		this.motor.setDirection(direction);
 	}
 
-	public void init() {
-		// BRAKE ajută enorm să nu mai “plutească” peste target la inerție
-		motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+	public void setVoltageSensor(VoltageSensor sensor) {
+		this.voltageSensor = sensor;
+	}
 
+	public void init() {
+		motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 		motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 		motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
 		cmdRpm = 0;
 		integral = 0;
 		lastErr = 0;
+		lastRpm = 0;
 		lastNs = System.nanoTime();
+		kickUntilNs = 0;
+
 		motor.setPower(0);
 	}
 
-	/** Setează RPM țintă (custom PID pe RPM + FF). */
 	public void setRpm(double targetRpm) {
 		if (targetRpm < 0) targetRpm = 0;
 
@@ -61,67 +72,70 @@ public class OuttakeSystem {
 		if (dt <= 0) dt = 0.02;
 		lastNs = now;
 
-		// rampă pe target
 		double maxDelta = RPM_SLEW * dt;
 		double delta = targetRpm - cmdRpm;
-		if (delta > maxDelta) delta = maxDelta;
-		if (delta < -maxDelta) delta = -maxDelta;
+		delta = Math.max(-maxDelta, Math.min(maxDelta, delta));
 		cmdRpm += delta;
 
 		double rpm = getRpm();
 		double err = cmdRpm - rpm;
 
-		// anti-windup simplu: integrăm doar când nu suntem blocați la limită
-		integral += err * dt;
+		double rpmRate = (rpm - lastRpm) / dt;
+		lastRpm = rpm;
 
 		double deriv = (err - lastErr) / dt;
 		lastErr = err;
 
-		// Feedforward (power aproximativ pentru rpm) + PID
-		double ff = kV * cmdRpm;
+		integral += err * dt;
+
+		double vbat = 12.0;
+		if (voltageSensor != null) {
+			double v = voltageSensor.getVoltage();
+			vbat = Math.max(11.0, Math.min(13.5, v));
+		}
+		double vComp = 12.0 / vbat;
+
+		double ff = (kS + kV * cmdRpm) * vComp;
 		double pid = kP * err + kI * integral + kD * deriv;
 
 		double power = ff + pid;
 
-		// IMPORTANT: dacă ești peste target (err negativ mare), taie power repede (nu-l lăsa să “plutească”)
-		if (err < -150) { // poți regla pragul (150-300 rpm)
-			power = Math.min(power, ff * 0.6); // frânează mai tare decât doar FF
+		boolean wantKick =
+				cmdRpm >= KICK_MIN_CMD_RPM &&
+						(err > KICK_ERR_RPM || rpmRate < -KICK_DROP_RPM_PER_S);
+
+		if (wantKick) {
+			kickUntilNs = Math.max(kickUntilNs,
+					now + (long)(KICK_TIME_SEC * 1e9));
 		}
 
-		// clamp
-		if (power > MAX_POWER) power = MAX_POWER;
-		if (power < MIN_POWER) power = MIN_POWER;
+		if (now < kickUntilNs) {
+			power += KICK_PWR;
+		}
 
+		if (err < -150) {
+			power = Math.min(power, ff * 0.6);
+		}
+
+		power = Math.max(MIN_POWER, Math.min(MAX_POWER, power));
 		motor.setPower(power);
 	}
 
-	/** RPM real (din encoder velocity). */
 	public double getRpm() {
 		double ticksPerSec = motor.getVelocity();
 		return ticksPerSec * 60.0 / TICKS_PER_REV;
 	}
 
-	/** Oprire clean. */
+	public void triggerKick() {
+		long now = System.nanoTime();
+		kickUntilNs = now + (long)(KICK_TIME_SEC * 1e9);
+	}
+
 	public void stop() {
 		cmdRpm = 0;
 		integral = 0;
 		lastErr = 0;
-		motor.setPower(0);
-	}
-
-	/** Debug manual. */
-	public void setPower(double p) {
-		motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-		motor.setPower(p);
-	}
-
-	public void enableVelocityControl() {
-		// păstrăm numele metodei ca să nu-ți pice alte coduri, dar aici rămânem pe custom power PID
-		motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-		cmdRpm = 0;
-		integral = 0;
-		lastErr = 0;
-		lastNs = System.nanoTime();
+		kickUntilNs = 0;
 		motor.setPower(0);
 	}
 

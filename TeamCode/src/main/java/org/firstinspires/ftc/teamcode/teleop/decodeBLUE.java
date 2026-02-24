@@ -180,10 +180,10 @@ public final class decodeBLUE extends BaseOpMode {
 
 	private double shooterTargetRpm = 4500;
 	private final double shooterTargetRpmNear = 3850;
-	private final double shooterTargetRpmFar  = 4400;
+	private final double shooterTargetRpmFar  = 3400;
 
 	// ================= SHOOTER ANGLE =================
-	private static final double SHOOTER_DEADZONE = 0.15;
+	private static final double SHOOTER_DEADZONE = -0.2;
 	private double shooterPosition = 0.5;
 
 	// ===== LL distance memory =====
@@ -322,20 +322,35 @@ public final class decodeBLUE extends BaseOpMode {
 	}
 
 	// ================= SHOOTER / OUTTAKE RPM =================
+	private boolean prevTransfer = false;
+
 	private void Shooter() {
-		if (driveInput.isPressed(Keybindings.Drive.SHOOTER_KEY)) {
+
+		boolean shooting = driveInput.isPressed(Keybindings.Drive.SHOOTER_KEY);
+
+		if (shooting) {
+
 			robot.outtake1.setRpm(shooterTargetRpm);
 			robot.outtake2.setRpm(shooterTargetRpm);
 
+			if (!prevTransfer) {
+				robot.outtake1.triggerKick();
+				robot.outtake2.triggerKick();
+			}
+
 			transfer_servo = true;
 			robot.intakeStopper.setDestination(TumblerSystem.TumblerDestination.TRANSFER);
+
 		} else {
+
 			robot.outtake1.stop();
 			robot.outtake2.stop();
 
 			transfer_servo = false;
 			robot.intakeStopper.setDestination(TumblerSystem.TumblerDestination.IDLE);
 		}
+
+		prevTransfer = shooting;
 	}
 
 	// ================= TURRET AIM =================
@@ -525,20 +540,22 @@ public final class decodeBLUE extends BaseOpMode {
 			return shooterPosition = posFar;
 		}
 
-		if (distanceCm >= 190) {
-			shooterTargetRpm = 3700;
+		if (distanceCm >= 210) {
+			shooterTargetRpm = 2800;
+			return shooterPosition = 0.54;
+		}
+
+		if (distanceCm >= 170) {
+			shooterTargetRpm = 2700;
 			return shooterPosition = 0.28;
 		}
 
 		if (distanceCm >= 90) {
-			shooterTargetRpm = 3300;
-			return shooterPosition = 0.12;
+			shooterTargetRpm = 2100;
+			return shooterPosition = 0.21;
 		}
 
-		if (distanceCm >= 220) {
-			shooterTargetRpm = 3900;
-			return shooterPosition = 0.54;
-		}
+
 
 		LLResult result = robot.limelight.getLatestResult();
 
@@ -547,11 +564,11 @@ public final class decodeBLUE extends BaseOpMode {
 				&& lastDistance < 95) {
 
 			shooterTargetRpm = 2500;
-			return shooterPosition = 0.12;
+			return shooterPosition = 0.21;
 		}
 
 		shooterTargetRpm = 2500;
-		return shooterPosition = 0.12;
+		return shooterPosition = 0.21;
 	}
 
 	private void ShooterAngle() {
@@ -653,7 +670,7 @@ public final class decodeBLUE extends BaseOpMode {
 			telemetry.addData("Shooter TargetRPM", (int) shooterTargetRpm);
 			telemetry.addData("OT1 RPM", (int) r1);
 			telemetry.addData("OT2 RPM", (int) r2);
-			telemetry.addData("AVG RPM", (int) ((r1 + r2) / 2.0));
+			telemetry.addData("AVG RPM ABS", (int)((Math.abs(r1)+Math.abs(r2))/2.0));
 		}
 
 		telemetry.addLine(" ");
