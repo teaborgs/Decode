@@ -36,7 +36,7 @@ public class Auto_BLUE_Far_9 extends BaseOpMode {
 	private static final double SHOOT_SAFE_IN_3 = 11;
 
 	private boolean shooterEnabled = false;
-	private double shooterRpmCmd = 4500;
+	private double shooterRpmCmd = 3250;
 	private boolean autonDone = false;
 
 	// ===== Shooter debug timing =====
@@ -235,7 +235,7 @@ public class Auto_BLUE_Far_9 extends BaseOpMode {
 								WAYPOINTS_BLUE_FAR.SHOOT.position.y + SHOOT_SAFE_IN),
 						WAYPOINTS_BLUE_FAR.SHOOT.heading.toDouble()).build();
 
-		// ===== Always-running shooter controller + TELEMETRY =====
+
 		Action shooterController = packet -> {
 			if (autonDone) return false;
 
@@ -314,10 +314,10 @@ public class Auto_BLUE_Far_9 extends BaseOpMode {
 
 		Action turretToTicks = robot.turret.goToTicksAction(
 				212, // target
-				0.6,                // power (0..1)
-				8,                  // toleranta ticks
+				0.6,                // power
+				8,                  // toleranta
 				1200,               // timeout ms
-				TURRET_HOLD_POWER   // hold power dupa ce ajunge
+				TURRET_HOLD_POWER   // hold power
 		);
 
 		Action turretHomeReset = robot.turret.goToZeroAndResetAction(
@@ -340,7 +340,7 @@ public class Auto_BLUE_Far_9 extends BaseOpMode {
 								turretToTicks,
 								RunInParallel(shooter_on, goToShoot),
 
-								waitUntilShooterRpm(4500, 150, 700),
+								waitUntilShooterRpm(3250, 150, 700),
 
 								newAimTurretLL(),
 								setAutonShooterAngle,
@@ -360,7 +360,7 @@ public class Auto_BLUE_Far_9 extends BaseOpMode {
 
 								RunInParallel(HumanToShoot, shooter_on),
 
-								waitUntilShooterRpm(4700, 150, 700),
+								waitUntilShooterRpm(3250, 150, 700),
 
 								newAimTurretLLSecond(),
 								setAutonShooterAngle,
@@ -380,7 +380,7 @@ public class Auto_BLUE_Far_9 extends BaseOpMode {
 
 								RunInParallel(backToShoot, shooter_on),
 
-								waitUntilShooterRpm(4800, 150, 700),
+								waitUntilShooterRpm(3250, 150, 700),
 
 								newAimTurretLLNEW(),
 								setAutonShooterAngle,

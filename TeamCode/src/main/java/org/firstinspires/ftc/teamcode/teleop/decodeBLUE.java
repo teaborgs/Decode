@@ -233,7 +233,7 @@ public final class decodeBLUE extends BaseOpMode {
 			robot.drivetrain.updatePoseEstimate();
 		}
 
-		// === DPAD_LEFT: reset odo + select Anchor A ===
+
 		boolean resetA = driveInput.isPressed(Keybindings.Drive.RESET_ANCHOR_A);
 		if (resetA && !prevResetAnchorA) {
 			setPoseInches(RESET_X_IN, RESET_Y_IN, RESET_H_DEG);
@@ -243,7 +243,7 @@ public final class decodeBLUE extends BaseOpMode {
 		}
 		prevResetAnchorA = resetA;
 
-		// === DPAD_RIGHT: reset odo + select Anchor B ===
+
 		boolean resetB = driveInput.isPressed(Keybindings.Drive.RESET_ANCHOR_B);
 		if (resetB && !prevResetAnchorB) {
 			setPoseInches(RESET_X_IN, RESET_Y_IN, RESET_H_DEG);
@@ -540,14 +540,14 @@ public final class decodeBLUE extends BaseOpMode {
 			return shooterPosition = posFar;
 		}
 
-		if (distanceCm >= 210) {
+	/*	if (distanceCm >= 210) {
 			shooterTargetRpm = 2800;
 			return shooterPosition = 0.54;
-		}
+		}*/
 
 		if (distanceCm >= 170) {
 			shooterTargetRpm = 2700;
-			return shooterPosition = 0.28;
+			return shooterPosition = 0.5;
 		}
 
 		if (distanceCm >= 90) {

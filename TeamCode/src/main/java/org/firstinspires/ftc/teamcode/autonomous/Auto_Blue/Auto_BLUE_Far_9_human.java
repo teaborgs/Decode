@@ -36,10 +36,10 @@ public class Auto_BLUE_Far_9_human extends BaseOpMode {
 	private static final double SHOOT_SAFE_IN_START = 2.5;
 
 	private boolean shooterEnabled = false;
-	private double shooterRpmCmd = 4800;
+	private double shooterRpmCmd = 3250;
 	private boolean autonDone = false;
 
-	// ===== Shooter debug timing (ca Far_9) =====
+
 	private long shooterOnMs = -1;
 	private int shootBurstIndex = 0;
 
@@ -385,10 +385,10 @@ public class Auto_BLUE_Far_9_human extends BaseOpMode {
 								turretToTicks,
 								// ===== SHOOT 1 =====
 								RunInParallel(
-										packet -> { shooterRpmCmd = 4800; return shooter_on.run(packet); },
+										packet -> { shooterRpmCmd = 3250; return shooter_on.run(packet); },
 										goToShoot
 								),
-								waitUntilShooterRpm(4800, 150, 700),
+								waitUntilShooterRpm(3250, 150, 700),
 
 								newAimTurretLL(),
 								setAutonShooterAngle,
@@ -412,9 +412,9 @@ public class Auto_BLUE_Far_9_human extends BaseOpMode {
 								// ===== SHOOT 2 =====
 								RunInParallel(
 										HumanToStart,
-										packet -> { shooterRpmCmd = 4800; return shooter_on.run(packet); }
+										packet -> { shooterRpmCmd = 3250; return shooter_on.run(packet); }
 								),
-								waitUntilShooterRpm(4800, 150, 700),
+								waitUntilShooterRpm(3250, 150, 700),
 
 								newAimTurretLLSecond(),
 								setAutonShooterAngle,
@@ -438,9 +438,9 @@ public class Auto_BLUE_Far_9_human extends BaseOpMode {
 								// ===== SHOOT 3 =====
 								RunInParallel(
 										HumanToStart2,
-										packet -> { shooterRpmCmd = 4800; return shooter_on.run(packet); }
+										packet -> { shooterRpmCmd = 3250; return shooter_on.run(packet); }
 								),
-								waitUntilShooterRpm(4800, 150, 700),
+								waitUntilShooterRpm(3250, 150, 700),
 
 								newAimTurretLLNEW(),
 								setAutonShooterAngle,
