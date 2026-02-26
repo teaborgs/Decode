@@ -11,5 +11,5 @@ public class WAYPOINTS_BLUE_FAR
 	public static final Pose2d PICKUPF    = new Pose2d(0.0, -28.68, Math.toRadians(0));
 	public static final Pose2d PICKUP     = new Pose2d(19.0, -28.68, Math.toRadians(0));
 	public static final Pose2d PICKUPL    = new Pose2d(49.89, -28.68, Math.toRadians(0));
-	public static final Pose2d FINISHLINE       = new Pose2d(0.0, -23.68, Math.toRadians(-180));
+	public static final Pose2d FINISHLINE       = new Pose2d(0.0, -26.68, Math.toRadians(-180));
 }

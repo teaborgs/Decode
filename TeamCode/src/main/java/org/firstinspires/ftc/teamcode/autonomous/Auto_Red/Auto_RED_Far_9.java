@@ -224,7 +224,7 @@ public class Auto_RED_Far_9 extends BaseOpMode {
 
 		Action HumanToStart = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.HUMAN)
 				.splineToConstantHeading(
-						new Vector2d(WAYPOINTS_RED_FAR.SHOOT.position.x + SHOOT_SAFE_IN,
+						new Vector2d(WAYPOINTS_RED_FAR.SHOOT.position.x + 10,
 								WAYPOINTS_RED_FAR.SHOOT.position.y),
 						WAYPOINTS_RED_FAR.SHOOT.heading.toDouble()).build();
 
@@ -354,10 +354,10 @@ public class Auto_RED_Far_9 extends BaseOpMode {
 
 								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
 								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
-								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
-								WaitFor(1.2),
+								shootArtifact, WaitFor(0.25),
+								WaitFor(0.5),
 
-								stopShooting, shooter_off, WaitFor(0.2),
+								stopShooting, shooter_off, WaitFor(0.15),
 
 								backToStart,
 								startIntake, WaitFor(0.1),
@@ -375,8 +375,8 @@ public class Auto_RED_Far_9 extends BaseOpMode {
 
 								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
 								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
-								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
-								WaitFor(1.2),
+								shootArtifact, WaitFor(0.25),
+								WaitFor(0.5),
 								shooter_off,
 								stopShooting,
 
@@ -395,7 +395,7 @@ public class Auto_RED_Far_9 extends BaseOpMode {
 								// burst 3
 								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
 								shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
-								shootArtifact, WaitFor(0.3), stopShooting, WaitFor(0.25),
+								shootArtifact, WaitFor(0.4),
 								WaitFor(1.2),
 								stopShooting,
 								shooter_off,

@@ -28,7 +28,7 @@ public class Auto_Blue_Far_12 extends BaseOpMode {
     private RobotHardware robot;
 
     private static final int AUTON_TURRET_TICKS = 20;
-    private static final double AUTON_SHOOTER_POS = 0.47;
+    private static final double AUTON_SHOOTER_POS = 0.44;
     private static final double TURRET_HOLD_POWER = 0.1;
 
     private static final double SHOOT_SAFE_IN = 8.0;
@@ -252,7 +252,7 @@ public class Auto_Blue_Far_12 extends BaseOpMode {
         Action HumanToStart = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.HUMAN)
                 .splineToConstantHeading(
                         new Vector2d(
-                                WAYPOINTS_BLUE_FAR.START.position.x + SHOOT_SAFE_IN,
+                                WAYPOINTS_BLUE_FAR.START.position.x + 18,
                                 WAYPOINTS_BLUE_FAR.START.position.y
                         ),
                         WAYPOINTS_BLUE_FAR.START.heading.toDouble()
@@ -262,7 +262,7 @@ public class Auto_Blue_Far_12 extends BaseOpMode {
         Action HumanToStart2 = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.HUMAN)
                 .splineToConstantHeading(
                         new Vector2d(
-                                WAYPOINTS_BLUE_FAR.START.position.x + SHOOT_SAFE_IN,
+                                WAYPOINTS_BLUE_FAR.START.position.x + 18,
                                 WAYPOINTS_BLUE_FAR.START.position.y
                         ),
                         WAYPOINTS_BLUE_FAR.START.heading.toDouble()
@@ -272,7 +272,7 @@ public class Auto_Blue_Far_12 extends BaseOpMode {
         Action HumanToStart3 = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.HUMAN)
                 .splineToConstantHeading(
                         new Vector2d(
-                                WAYPOINTS_BLUE_FAR.START.position.x + SHOOT_SAFE_IN,
+                                WAYPOINTS_BLUE_FAR.START.position.x + 18,
                                 WAYPOINTS_BLUE_FAR.START.position.y
                         ),
                         WAYPOINTS_BLUE_FAR.START.heading.toDouble()
@@ -395,10 +395,10 @@ public class Auto_Blue_Far_12 extends BaseOpMode {
                                 turretToTicks,
                                 // ===== SHOOT 1 =====
                                 RunInParallel(
-                                        packet -> { shooterRpmCmd = 4800; return shooter_on.run(packet); }
+                                        packet -> { shooterRpmCmd = 3300; return shooter_on.run(packet); }
 
                                 ),
-                                waitUntilShooterRpm(4800, 150, 700),
+                                waitUntilShooterRpm(3300, 150, 700),
 
                                 newAimTurretLL(),
                                 setAutonShooterAngle,
@@ -406,15 +406,16 @@ public class Auto_Blue_Far_12 extends BaseOpMode {
                                 // burst 1
                                 shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
                                 shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
-                                shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
-                                WaitFor(1.0),
+                                shootArtifact,
+                                WaitFor(0.5),
 
                                 stopShooting,
                                 shooter_off,
-                                WaitFor(0.2),
+                                WaitFor(0.1),
 
                                 // ===== HUMAN CYCLE 1 =====
 
+                                backToStart,
                                 startIntake, WaitFor(0.1),
                                 HumanPark, WaitFor(0.6),
                                 stopIntake,
@@ -422,9 +423,9 @@ public class Auto_Blue_Far_12 extends BaseOpMode {
                                 // ===== SHOOT 2 =====
                                 RunInParallel(
                                         HumanToStart,
-                                        packet -> { shooterRpmCmd = 4800; return shooter_on.run(packet); }
+                                        packet -> { shooterRpmCmd = 3300; return shooter_on.run(packet); }
                                 ),
-                                waitUntilShooterRpm(4800, 150, 700),
+                                waitUntilShooterRpm(3300, 150, 700),
 
                                 newAimTurretLLSecond(),
                                 setAutonShooterAngle,
@@ -432,8 +433,8 @@ public class Auto_Blue_Far_12 extends BaseOpMode {
                                 // burst 2
                                 shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
                                 shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
-                                shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
-                                WaitFor(1.0),
+                                shootArtifact,
+                                WaitFor(0.5),
 
                                 stopShooting,
                                 shooter_off,
@@ -448,9 +449,9 @@ public class Auto_Blue_Far_12 extends BaseOpMode {
                                 // ===== SHOOT 3 =====
                                 RunInParallel(
                                         HumanToStart2,
-                                        packet -> { shooterRpmCmd = 4800; return shooter_on.run(packet); }
+                                        packet -> { shooterRpmCmd = 3300; return shooter_on.run(packet); }
                                 ),
-                                waitUntilShooterRpm(4800, 150, 700),
+                                waitUntilShooterRpm(3300, 150, 700),
 
                                 newAimTurretLLNEW(),
                                 setAutonShooterAngle,
@@ -458,28 +459,25 @@ public class Auto_Blue_Far_12 extends BaseOpMode {
                                 // burst 3
                                 shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
                                 shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
-                                shootArtifact, WaitFor(0.30), stopShooting, WaitFor(0.25),
-                                WaitFor(1.0),
+                                shootArtifact,
+                                WaitFor(0.5),
 
                                 stopShooting,
                                 shooter_off,
+                                WaitFor(0.1),
 
-                                // ===== FINAL PARK (cum ai pus) =====
+                                //cycle 2
 
-                                WaitFor(0.2),
-
-                                // ===== HUMAN CYCLE 2 (pastrez cum ai tu) =====
-
-                                startIntake, WaitFor(0.2),
+                                startIntake, WaitFor(0.15),
                                 HumanPark3, WaitFor(0.6),
                                 stopIntake, WaitFor(0.1),
 
                                 // ===== SHOOT 3 =====
                                 RunInParallel(
                                         HumanToStart3,
-                                        packet -> { shooterRpmCmd = 4800; return shooter_on.run(packet); }
+                                        packet -> { shooterRpmCmd = 3300; return shooter_on.run(packet); }
                                 ),
-                                waitUntilShooterRpm(4800, 150, 700),
+                                waitUntilShooterRpm(3300, 150, 700),
 
                                 newAimTurretLLNEW(),
                                 setAutonShooterAngle,
@@ -487,14 +485,14 @@ public class Auto_Blue_Far_12 extends BaseOpMode {
                                 // burst 3
                                 shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
                                 shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
-                                shootArtifact, WaitFor(0.30), stopShooting, WaitFor(0.25),
-                                WaitFor(1.0),
+                                shootArtifact,
+                                WaitFor(0.5),
 
                                 stopShooting,
                                 shooter_off,
+                                WaitFor(0.1),
 
-                                // ===== FINAL PARK (cum ai pus) =====
-
+                                //leave
                                 RunInParallel(turretHomeReset, finishline)
                         )
                 )
