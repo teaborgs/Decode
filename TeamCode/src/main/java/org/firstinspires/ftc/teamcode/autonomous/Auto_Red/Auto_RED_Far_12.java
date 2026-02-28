@@ -22,21 +22,24 @@ import org.firstinspires.ftc.teamcode.systems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.systems.OuttakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@Autonomous(name = "🔴🔴Far_9🔴🔴", group = "Auto")
-public class Auto_RED_Far_9 extends BaseOpMode {
+@Autonomous(name = "🔴🔴Far_12🔴🔴", group = "Auto")
+public class Auto_RED_Far_12 extends BaseOpMode {
 
     private RobotHardware robot;
 
+    private static final int AUTON_TURRET_TICKS = 20;
     private static final double AUTON_SHOOTER_POS = 0.44;
     private static final double TURRET_HOLD_POWER = 0.1;
+
     private static final double SHOOT_SAFE_IN = 8.0;
     private static final double SHOOT_SAFE_IN_2 = 15.0;
-    private static final double SHOOT_SAFE_IN_3 = 11;
+    private static final double SHOOT_SAFE_IN_START = 2.5;
 
     private boolean shooterEnabled = false;
-    private double shooterRpmCmd = 3000;
+    private double shooterRpmCmd = 4800;
     private boolean autonDone = false;
 
+    // ===== Shooter debug timing (ca Far_9) =====
     private long shooterOnMs = -1;
     private int shootBurstIndex = 0;
 
@@ -56,7 +59,8 @@ public class Auto_RED_Far_9 extends BaseOpMode {
         turretHoldCurrent(TURRET_HOLD_POWER);
     }
 
-    @Override protected void jOnInitialize() {}
+    @Override
+    protected void jOnInitialize() {}
 
     private void turretHoldCurrent(double holdPower) {
         DcMotorEx turret = robot.turret.getMotor();
@@ -79,7 +83,9 @@ public class Auto_RED_Far_9 extends BaseOpMode {
         return new AimTurretWithLimelightAction(this, robot, 0.035, 0.07, 0.5, 0.30, 750, 1.0, TURRET_HOLD_POWER);
     }
     private Action newAimTurretLLSecond() { return newAimTurretLL(); }
+    private Action newAimTurretLLFinal()  { return newAimTurretLL(); }
 
+    /** Wait până când avgRPM e aproape de target (ca în Far_9), cu timeout. */
     private Action waitUntilShooterRpm(double targetRpm, double tolRpm, long timeoutMs) {
         return new Action() {
             boolean init = false;
@@ -108,20 +114,33 @@ public class Auto_RED_Far_9 extends BaseOpMode {
     }
 
     private static class AimTurretWithLimelightAction implements Action {
-        private final Auto_RED_Far_9 op;
+        private final Auto_RED_Far_12 op;
         private final RobotHardware robot;
         private final double kP, minPower, maxPower, lockDeg, dir, hold;
         private final long timeout;
         private boolean init = false;
         private long start;
 
-        AimTurretWithLimelightAction(Auto_RED_Far_9 op, RobotHardware robot,
-                                     double kP, double minPower, double maxPower,
-                                     double lockDeg, long timeout, double dir, double hold) {
-            this.op = op; this.robot = robot; this.kP = kP;
-            this.minPower = minPower; this.maxPower = maxPower;
-            this.lockDeg = lockDeg; this.timeout = timeout;
-            this.dir = dir; this.hold = hold;
+        AimTurretWithLimelightAction(
+                Auto_RED_Far_12 op,
+                RobotHardware robot,
+                double kP,
+                double minPower,
+                double maxPower,
+                double lockDeg,
+                long timeout,
+                double dir,
+                double hold
+        ) {
+            this.op = op;
+            this.robot = robot;
+            this.kP = kP;
+            this.minPower = minPower;
+            this.maxPower = maxPower;
+            this.lockDeg = lockDeg;
+            this.timeout = timeout;
+            this.dir = dir;
+            this.hold = hold;
         }
 
         @Override
@@ -133,40 +152,27 @@ public class Auto_RED_Far_9 extends BaseOpMode {
                 robot.turret.getMotor().setPower(0);
             }
 
-            packet.put("TurretAim active", true);
-            packet.put("TurretAim timeMs", System.currentTimeMillis() - start);
-
             if (System.currentTimeMillis() - start >= timeout) {
                 op.turretHoldCurrent(hold);
-                packet.put("TurretAim done", "TIMEOUT");
                 return false;
             }
 
             LLResult r = robot.limelight.getLatestResult();
-            boolean valid = (r != null && r.isValid());
-            packet.put("LL valid", valid);
-
-            if (!valid) {
+            if (r == null || !r.isValid()) {
                 robot.turret.getMotor().setPower(0);
-                packet.put("TurretAim done", "NO_LL");
                 return true;
             }
 
             double tx = r.getTx();
-            packet.put("LL tx", tx);
-
             if (Math.abs(tx) <= lockDeg) {
                 op.turretHoldCurrent(hold);
-                packet.put("TurretAim done", "LOCK");
                 return false;
             }
 
             double p = dir * kP * tx;
             p = Math.max(Math.min(p, maxPower), -maxPower);
             if (p > 0) p = Math.max(p, minPower);
-            else p = Math.min(p, -minPower);
-
-            packet.put("TurretPwr", p);
+            else       p = Math.min(p, -minPower);
 
             robot.turret.getMotor().setPower(p);
             return true;
@@ -178,9 +184,19 @@ public class Auto_RED_Far_9 extends BaseOpMode {
 
         robot.drivetrain.updatePoseEstimate();
 
+        // ===== PATHS (PASTRATE EXACT ca la tine) =====
+
         Action goToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.START)
                 .setTangent(Math.toRadians(90))
-                .lineToY(WAYPOINTS_RED_FAR.SHOOT.position.y).build();
+                .lineToY(WAYPOINTS_RED_FAR.SHOOT.position.y)
+                .build();
+
+        Action finishline = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.SHOOT)
+                .setTangent(Math.toRadians(90))
+                .lineToY(WAYPOINTS_RED_FAR.FINISHLINE.position.y)
+                .build();
+
+
 
         AccelConstraint humanAccel = new ProfileAccelConstraint(
                 MecanumDrive.PARAMS.minProfileAccel,
@@ -191,50 +207,89 @@ public class Auto_RED_Far_9 extends BaseOpMode {
                 .lineToX(WAYPOINTS_RED_FAR.HUMAN.position.x)
                 .build();
 
+        Action HumanPark2 = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.START, humanAccel)
+                .lineToX(WAYPOINTS_RED_FAR.HUMAN.position.x)
+                .build();
+
+        Action HumanPark3 =
+                robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.START)
+                        .strafeTo(new Vector2d(
+                                WAYPOINTS_RED_FAR.HUMAN.position.x,
+                                WAYPOINTS_RED_FAR.HUMAN.position.y
+                        ))
+                        .build();
+
         Action goToPickup = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.PICKUPF)
                 .setTangent(Math.toRadians(0))
-                .lineToX(WAYPOINTS_RED_FAR.PICKUP.position.x).build();
+                .lineToX(WAYPOINTS_RED_FAR.PICKUP.position.x)
+                .build();
 
         AccelConstraint pickupAccel = new ProfileAccelConstraint(
                 MecanumDrive.PARAMS.minProfileAccel,
-                20
+                30
         );
 
         Action goToPickupL = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.PICKUP, pickupAccel)
                 .setTangent(Math.toRadians(0))
-                .lineToX(WAYPOINTS_RED_FAR.PICKUPL.position.x).build();
-
-        Action finishline = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.SHOOT)
-                .setTangent(Math.toRadians(90))
-                .lineToY(WAYPOINTS_RED_FAR.FINISHLINE.position.y)
+                .lineToX(WAYPOINTS_RED_FAR.PICKUPL.position.x)
                 .build();
 
         AccelConstraint backstartAccel = new ProfileAccelConstraint(
                 MecanumDrive.PARAMS.minProfileAccel,
-                10
+                20
         );
 
-        Action backToStart = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.SHOOT, backstartAccel)
+        Action backToStart = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.START, backstartAccel)
                 .setTangent(Math.toRadians(90))
-                .lineToY(WAYPOINTS_RED_FAR.START.position.y).build();
+                .lineToY(WAYPOINTS_RED_FAR.START.position.y)
+                .build();
 
-        Action HumanToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.HUMAN)
+        Action backToStart2 = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.START, backstartAccel)
+                .setTangent(Math.toRadians(90))
+                .lineToY(WAYPOINTS_RED_FAR.START.position.y)
+                .build();
+
+        Action HumanToStart = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.HUMAN)
                 .splineToConstantHeading(
                         new Vector2d(
-                                WAYPOINTS_RED_FAR.SHOOT.position.x + SHOOT_SAFE_IN_3,
-                                WAYPOINTS_RED_FAR.SHOOT.position.y
+                                WAYPOINTS_RED_FAR.START.position.x + 18,
+                                WAYPOINTS_RED_FAR.START.position.y
                         ),
-                        WAYPOINTS_RED_FAR.SHOOT.heading.toDouble()
-                ).build();
+                        WAYPOINTS_RED_FAR.START.heading.toDouble()
+                )
+                .build();
+
+        Action HumanToStart2 = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.HUMAN)
+                .splineToConstantHeading(
+                        new Vector2d(
+                                WAYPOINTS_RED_FAR.START.position.x + 18,
+                                WAYPOINTS_RED_FAR.START.position.y
+                        ),
+                        WAYPOINTS_RED_FAR.START.heading.toDouble()
+                )
+                .build();
+
+        Action HumanToStart3 = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.HUMAN)
+                .splineToConstantHeading(
+                        new Vector2d(
+                                WAYPOINTS_RED_FAR.START.position.x + 18,
+                                WAYPOINTS_RED_FAR.START.position.y
+                        ),
+                        WAYPOINTS_RED_FAR.START.heading.toDouble()
+                )
+                .build();
 
         Action backToShoot = robot.drivetrain.actionBuilder(WAYPOINTS_RED_FAR.PICKUPL)
                 .splineToConstantHeading(
                         new Vector2d(
                                 WAYPOINTS_RED_FAR.SHOOT.position.x + SHOOT_SAFE_IN_2,
-                                WAYPOINTS_RED_FAR.SHOOT.position.y - SHOOT_SAFE_IN
+                                WAYPOINTS_RED_FAR.SHOOT.position.y + SHOOT_SAFE_IN_START
                         ),
                         WAYPOINTS_RED_FAR.SHOOT.heading.toDouble()
-                ).build();
+                )
+                .build();
+
+        // ===== SHOOTER / INTAKE (ca Far_9) =====
 
         Action shooterController = packet -> {
             if (autonDone) return false;
@@ -276,12 +331,8 @@ public class Auto_RED_Far_9 extends BaseOpMode {
         };
 
         Action shooter_on = packet -> {
-            shooterRpmCmd = 3000;
             shooterEnabled = true;
             shooterOnMs = System.currentTimeMillis();
-
-            robot.outtake1.triggerKick();
-            robot.outtake2.triggerKick();
 
             robot.intakeStopper.setDestination(TumblerSystem.TumblerDestination.TRANSFER);
             turretHoldCurrent(TURRET_HOLD_POWER);
@@ -316,82 +367,132 @@ public class Auto_RED_Far_9 extends BaseOpMode {
         };
 
         Action turretToTicks = robot.turret.goToTicksAction(
-                -200,
-                0.6,
-                8,
-                1200,
-                TURRET_HOLD_POWER
+                -200, // target
+                0.6,                // power (0..1)
+                8,                  // toleranta ticks
+                1200,               // timeout ms
+                TURRET_HOLD_POWER   // hold power dupa ce ajunge
         );
 
         Action turretHomeReset = robot.turret.goToZeroAndResetAction(
-                0.6,
-                8,
-                1500,
-                TURRET_HOLD_POWER
+                0.6,                // power
+                8,                  // toleranta
+                1500,               // timeout ms
+                TURRET_HOLD_POWER   // hold power
         );
 
         Action startIntake = packet -> { robot.intake.setIntakeDirection(IntakeSystem.IntakeDirection.FORWARD); packet.put("EVENT", "startIntake"); return false; };
-        Action stopIntake  = packet -> { robot.intake.setIntakeDirection(IntakeSystem.IntakeDirection.STOP); packet.put("EVENT", "stopIntake"); return false; };
+        Action stopIntake  = packet -> { robot.intake.setIntakeDirection(IntakeSystem.IntakeDirection.STOP);    packet.put("EVENT", "stopIntake");  return false; };
 
         Action setAutonShooterAngle = packet -> { robot.turretTumbler.setPosition(AUTON_SHOOTER_POS); packet.put("EVENT", "setShooterAngle"); return false; };
 
+        // ===== RUN =====
         Actions.runBlocking(
                 RunInParallel(
                         shooterController,
                         RunSequentially(
-                                turretToTicks,
-                                RunInParallel(shooter_on, goToShoot),
 
-                                waitUntilShooterRpm(shooterRpmCmd, 150, 900),
+                                turretToTicks,
+                                // ===== SHOOT 1 =====
+                                RunInParallel(
+                                        packet -> { shooterRpmCmd = 3300; return shooter_on.run(packet); }
+
+                                ),
+                                waitUntilShooterRpm(3300, 150, 700),
 
                                 newAimTurretLL(),
                                 setAutonShooterAngle,
 
+                                // burst 1
                                 shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
                                 shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
                                 shootArtifact,
                                 WaitFor(0.5),
 
-                                stopShooting, shooter_off, WaitFor(0.1),
-
-                                RunInParallel(backToStart, startIntake),
+                                stopShooting,
+                                shooter_off,
                                 WaitFor(0.1),
-                                HumanPark, WaitFor(0.7),
+
+                                // ===== HUMAN CYCLE 1 =====
+
+                                backToStart,
+                                startIntake, WaitFor(0.1),
+                                HumanPark, WaitFor(0.6),
                                 stopIntake,
 
-                                RunInParallel(HumanToShoot, shooter_on),
-
-                                waitUntilShooterRpm(shooterRpmCmd, 150, 900),
+                                // ===== SHOOT 2 =====
+                                RunInParallel(
+                                        HumanToStart,
+                                        packet -> { shooterRpmCmd = 3300; return shooter_on.run(packet); }
+                                ),
+                                waitUntilShooterRpm(3300, 150, 700),
 
                                 newAimTurretLLSecond(),
                                 setAutonShooterAngle,
 
+                                // burst 2
                                 shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
                                 shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
                                 shootArtifact,
                                 WaitFor(0.5),
 
-                                stopShooting, shooter_off, WaitFor(0.1),
+                                stopShooting,
+                                shooter_off,
+                                WaitFor(0.2),
 
-                                startIntake, WaitFor(0.1),
-                                goToPickup, WaitFor(0.15),
-                                goToPickupL, WaitFor(0.2),
-                                stopIntake, WaitFor(0.2),
+                                // ===== HUMAN CYCLE 2 (pastrez cum ai tu) =====
 
-                                RunInParallel(backToShoot, shooter_on),
+                                startIntake, WaitFor(0.2),
+                                HumanPark2, WaitFor(0.6),
+                                stopIntake, WaitFor(0.1),
 
-                                waitUntilShooterRpm(shooterRpmCmd, 150, 900),
+                                // ===== SHOOT 3 =====
+                                RunInParallel(
+                                        HumanToStart2,
+                                        packet -> { shooterRpmCmd = 3300; return shooter_on.run(packet); }
+                                ),
+                                waitUntilShooterRpm(3300, 150, 700),
 
                                 newAimTurretLLNEW(),
                                 setAutonShooterAngle,
 
+                                // burst 3
                                 shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
                                 shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
                                 shootArtifact,
                                 WaitFor(0.5),
 
-                                RunInParallel(stopShooting, shooter_off), WaitFor(0.1),
+                                stopShooting,
+                                shooter_off,
+                                WaitFor(0.1),
 
+                                //cycle 2
+
+                                startIntake, WaitFor(0.15),
+                                HumanPark3, WaitFor(0.6),
+                                stopIntake, WaitFor(0.1),
+
+                                // ===== SHOOT 3 =====
+                                RunInParallel(
+                                        HumanToStart3,
+                                        packet -> { shooterRpmCmd = 3300; return shooter_on.run(packet); }
+                                ),
+                                waitUntilShooterRpm(3300, 150, 700),
+
+                                newAimTurretLLNEW(),
+                                setAutonShooterAngle,
+
+                                // burst 3
+                                shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
+                                shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
+                                shootArtifact,
+                                WaitFor(0.5),
+
+                                stopShooting,
+                                shooter_off,
+                                WaitFor(0.1),
+
+                                //leave
                                 RunInParallel(turretHomeReset, finishline)
                         )
                 )

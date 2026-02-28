@@ -546,8 +546,8 @@ public final class decodeBLUE extends BaseOpMode {
 		}*/
 
 		if (distanceCm >= 170) {
-			shooterTargetRpm = 2500;
-			return shooterPosition = 0.1;
+			shooterTargetRpm = 2400;
+			return shooterPosition = 0.21;
 		}
 
 		if (distanceCm >= 90) {

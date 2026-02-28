@@ -9,7 +9,7 @@ public class WAYPOINTS_RED_CLOSE_EXP
 
 	// shoot -27.15 -52.59
 	public static final Pose2d SHOOT =
-			new Pose2d(-27.15, -47, Math.toRadians(0));
+			new Pose2d(-24, -47, Math.toRadians(0));
 
 	// pickup1 15.25 -52.59
 	public static final Pose2d PICKUP1 =
@@ -17,7 +17,7 @@ public class WAYPOINTS_RED_CLOSE_EXP
 
 	// opengatestart 2.94 -62.02
 	public static final Pose2d OPENGATES =
-			new Pose2d(2.94, -62.02, Math.toRadians(0));
+			new Pose2d(2.94, -52, Math.toRadians(0));
 
 	// opengate 15.05 -62.02
 	public static final Pose2d OPENGATE =

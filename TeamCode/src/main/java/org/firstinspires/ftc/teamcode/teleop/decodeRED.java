@@ -546,7 +546,7 @@ public final class decodeRED extends BaseOpMode {
 		}*/
 
         if (distanceCm >= 170) {
-            shooterTargetRpm = 2500;
+            shooterTargetRpm = 2400;
             return shooterPosition = 0.21;
         }
 

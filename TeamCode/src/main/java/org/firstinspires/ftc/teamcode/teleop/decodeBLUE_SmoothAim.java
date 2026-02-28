@@ -562,11 +562,11 @@ public final class decodeBLUE_SmoothAim extends BaseOpMode {
 				&& hasLastDistance
 				&& lastDistance < 95) {
 
-			shooterTargetRpm = 2500;
+			shooterTargetRpm = 2400;
 			return shooterPosition = 0.12;
 		}
 
-		shooterTargetRpm = 2500;
+		shooterTargetRpm = 2400;
 		return shooterPosition = 0.12;
 	}
 
