@@ -18,8 +18,8 @@ import org.firstinspires.ftc.teamcode.systems.IntakeSystem.IntakeDirection;
 import org.firstinspires.ftc.teamcode.systems.OuttakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@TeleOp(name = "🔵🔵decodeaza-mi-l🔵🔵", group = "TeleOp")
-public final class decodeBLUE extends BaseOpMode {
+@TeleOp(name = "🔵🔵decodeaza-mi-l faneee🔵🔵", group = "TeleOp")
+public final class decodeFANE extends BaseOpMode {
 	private InputSystem driveInput, armInput;
 
 	private RobotHardware robot;
@@ -86,9 +86,10 @@ public final class decodeBLUE extends BaseOpMode {
 	private static final double MAX_POWER = 0.50;
 	private static final int ON_TARGET_TICKS = 6;
 
-	private static final double kP_LL = 0.0060;
-	private static final double kD_LL = 0.0012;
-	private static final double MAX_POWER_LL = 0.60;
+	private static final double LL_TX_kP = 0.018;
+	private static final double LL_TX_kD = 0.0025;
+	private static final double LL_MIN_POWER = 0.08;
+	private static final double MAX_POWER_LL = 0.28;
 
 	private static final int turretMinTicks = -472;
 	private static final int turretMaxTicks = 438;
@@ -105,11 +106,8 @@ public final class decodeBLUE extends BaseOpMode {
 		robot.turret.getMotor().setPower(TURRET_HW_SIGN * logicalPower);
 	}
 
-	private static final double LL_DZ_STOP = 1.2;
-	private static final double LL_DZ_START = 2.0;
-
-	private static final double LL_DEG_PER_TX = 1.8;
-	private static final double LL_MAX_STEP_DEG = 14.0;
+	private static final double LL_DZ_STOP = 1.0;
+	private static final double LL_DZ_START = 1.8;
 
 	private static final double LL_HOLD_SEC = 0.20;
 	private static final double LL_DISABLE_NEAR_LIMIT_DEG = 160.0;
@@ -140,11 +138,15 @@ public final class decodeBLUE extends BaseOpMode {
 	private double activeAnchorX_dbg = 0.0;
 	private double activeAnchorY_dbg = 0.0;
 
+	private double filteredTx = 0.0;
+	private boolean hasFilteredTx = false;
+	private double llTxErrPrev = 0.0;
+
 	private boolean transfer_servo = false;
 
 	private double shooterTargetRpm = 4500;
 	private final double shooterTargetRpmNear = 3850;
-	private final double shooterTargetRpmFar = 3400;
+	private final double shooterTargetRpmFar = 3300;
 
 	private static final double SHOOTER_DEADZONE = -0.2;
 	private double shooterPosition = 0.5;
@@ -192,6 +194,9 @@ public final class decodeBLUE extends BaseOpMode {
 		llAligned = false;
 		llHasLock = false;
 		llLastSeenSec = -1.0;
+		filteredTx = 0.0;
+		hasFilteredTx = false;
+		llTxErrPrev = 0.0;
 		errPrev = 0.0;
 		dtTimer.reset();
 
@@ -234,7 +239,10 @@ public final class decodeBLUE extends BaseOpMode {
 
 			targetTicks = 0;
 			errPrev = 0.0;
+			llTxErrPrev = 0.0;
 			dtTimer.reset();
+			filteredTx = 0.0;
+			hasFilteredTx = false;
 		}
 		prevResetTurretEncoder = resetTurret;
 
@@ -246,6 +254,9 @@ public final class decodeBLUE extends BaseOpMode {
 			llAligned = false;
 			llHasLock = false;
 			llLastSeenSec = -1.0;
+			filteredTx = 0.0;
+			hasFilteredTx = false;
+			llTxErrPrev = 0.0;
 
 			errPrev = 0.0;
 			dtTimer.reset();
@@ -317,8 +328,6 @@ public final class decodeBLUE extends BaseOpMode {
 	private static final double TURRET_MANUAL_DEADZONE = 0.12;
 
 	private void TurretAimV4_IN_TELEOP() {
-		DcMotorEx turret = robot.turret.getMotor();
-
 		if (!autoAim) {
 			double x = driveInput.getValue(Keybindings.Drive.TURRET_MANUAL);
 
@@ -363,12 +372,23 @@ public final class decodeBLUE extends BaseOpMode {
 		if (llValid) {
 			llLastSeenSec = nowSec;
 			llHasLock = true;
-			tx_dbg = r.getTx();
+
+			double rawTx = r.getTx();
+			if (!hasFilteredTx) {
+				filteredTx = rawTx;
+				hasFilteredTx = true;
+			} else {
+				filteredTx = 0.78 * filteredTx + 0.22 * rawTx;
+			}
+			tx_dbg = filteredTx;
 		} else {
 			tx_dbg = 0.0;
 			if (llHasLock && llLastSeenSec >= 0 && (nowSec - llLastSeenSec) > LL_HOLD_SEC) {
 				llHasLock = false;
 				llAligned = false;
+				filteredTx = 0.0;
+				hasFilteredTx = false;
+				llTxErrPrev = 0.0;
 			}
 		}
 
@@ -379,10 +399,10 @@ public final class decodeBLUE extends BaseOpMode {
 		boolean useLL = llHasLock && !nearLimit;
 		useLL_dbg = useLL;
 
-		double turretCmdDeg;
-
 		if (useLL) {
-			double tx = r.getTx();
+			double tx = filteredTx;
+			double dt = Math.max(0.01, dtTimer.seconds());
+			dtTimer.reset();
 
 			if (llAligned) {
 				if (Math.abs(tx) > LL_DZ_START) {
@@ -399,20 +419,32 @@ public final class decodeBLUE extends BaseOpMode {
 				}
 			}
 
-			double stepDeg = clamp(LL_TURN_SIGN * tx * LL_DEG_PER_TX, -LL_MAX_STEP_DEG, LL_MAX_STEP_DEG);
-			turretCmdDeg = nowTurretDeg + stepDeg;
-			turretCmdDeg = clamp(turretCmdDeg, -TURRET_LIMIT_DEG, TURRET_LIMIT_DEG);
-		} else {
-			if (aimInvalid) {
-				setTurretPowerLogical(0);
-				return;
+			double derr = (tx - llTxErrPrev) / dt;
+			llTxErrPrev = tx;
+
+			double power = LL_TURN_SIGN * (LL_TX_kP * tx + LL_TX_kD * derr);
+
+			if (Math.abs(power) < LL_MIN_POWER) {
+				power = Math.signum(power) * LL_MIN_POWER;
 			}
-			turretCmdDeg = clamp(turretDesiredDeg, -TURRET_LIMIT_DEG, TURRET_LIMIT_DEG);
+
+			power = clamp(power, -MAX_POWER_LL, MAX_POWER_LL);
+			power = guardPowerByLimits(power, nowTicks);
+
+			turretCmdDeg_dbg = nowTurretDeg;
+
+			setTurretPowerLogical(power);
+			return;
 		}
 
-		turretCmdDeg_dbg = turretCmdDeg;
+		if (aimInvalid) {
+			setTurretPowerLogical(0);
+			return;
+		}
 
-		int unclamped = (int) Math.round(turretCmdDeg / degPerTick);
+		turretCmdDeg_dbg = clamp(turretDesiredDeg, -TURRET_LIMIT_DEG, TURRET_LIMIT_DEG);
+
+		int unclamped = (int) Math.round(turretCmdDeg_dbg / degPerTick);
 		targetTicks = clampTicks(unclamped);
 
 		nowTicks = getTurretTicks();
@@ -430,13 +462,8 @@ public final class decodeBLUE extends BaseOpMode {
 			return;
 		}
 
-		double pGain = useLL ? kP_LL : kP;
-		double dGain = useLL ? kD_LL : kD;
-		double maxPwr = useLL ? MAX_POWER_LL : MAX_POWER;
-
-		double power = pGain * err + dGain * derr;
-		power = clamp(power, -maxPwr, maxPwr);
-
+		double power = kP * err + kD * derr;
+		power = clamp(power, -MAX_POWER, MAX_POWER);
 		power = guardPowerByLimits(power, nowTicks);
 
 		setTurretPowerLogical(power);
@@ -494,10 +521,7 @@ public final class decodeBLUE extends BaseOpMode {
 
 		LLResult result = robot.limelight.getLatestResult();
 
-		if ((result == null || !result.isValid())
-				&& hasLastDistance
-				&& lastDistance < 95) {
-
+		if ((result == null || !result.isValid()) && hasLastDistance && lastDistance < 95) {
 			shooterTargetRpm = 2500;
 			return shooterPosition = 0.21;
 		}
@@ -561,20 +585,15 @@ public final class decodeBLUE extends BaseOpMode {
 			if (transfer_servo) robot.transfer.start();
 			robot.intake.setIntakeDirection(IntakeDirection.FORWARD_SHOOT);
 
-		}
-		else if (driveInput.isPressed(Keybindings.Drive.INTAKE_KEY)) {
-
+		} else if (driveInput.isPressed(Keybindings.Drive.INTAKE_KEY)) {
 
 			robot.intake.setIntakeDirection(IntakeDirection.FORWARD);
 
-		}
-		else if (driveInput.isPressed(Keybindings.Drive.INTAKE_REVERSE_KEY)) {
-
+		} else if (driveInput.isPressed(Keybindings.Drive.INTAKE_REVERSE_KEY)) {
 
 			robot.intake.setIntakeDirection(IntakeDirection.REVERSE);
 
-		}
-		else {
+		} else {
 			robot.transfer.stop();
 			robot.intake.setIntakeDirection(IntakeDirection.STOP);
 		}
@@ -644,7 +663,7 @@ public final class decodeBLUE extends BaseOpMode {
 			telemetry.addData("Shooter TargetRPM", (int) shooterTargetRpm);
 			telemetry.addData("OT1 RPM", (int) r1);
 			telemetry.addData("OT2 RPM", (int) r2);
-			telemetry.addData("AVG RPM ABS", (int)((Math.abs(r1)+Math.abs(r2))/2.0));
+			telemetry.addData("AVG RPM ABS", (int) ((Math.abs(r1) + Math.abs(r2)) / 2.0));
 		}
 
 		telemetry.addLine(" ");

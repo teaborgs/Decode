@@ -3,8 +3,10 @@ package org.firstinspires.ftc.teamcode;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
@@ -16,17 +18,19 @@ import org.firstinspires.ftc.teamcode.systems.TransferSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 import org.firstinspires.ftc.teamcode.systems.TurretSystem;
 
-public final class RobotHardware
-{
+public final class RobotHardware {
 	public final PinpointDrive drivetrain;
 	public TumblerSystem intakeStopper, turretTumbler;
+	public TransferSystem transfer;
 	public DistanceSystem distanceSystem;
 
 	public IntakeSystem intake;
 	public OuttakeSystem outtake1, outtake2;
 	public TurretSystem turret;
 
-	public TransferSystem transfer;
+	public ColorSensor cupStartColor, cupEndColor;
+	public DistanceSensor cupStartDist, cupEndDist;
+
 	public Limelight3A limelight;
 
 	private final VoltageSensor voltageSensor;
@@ -34,12 +38,18 @@ public final class RobotHardware
 	public RobotHardware(HardwareMap hardwareMap) {
 		drivetrain = new PinpointDrive(hardwareMap, new Pose2d(0, 0, 0));
 
+		cupStartColor = hardwareMap.get(ColorSensor.class, "cupStartColor");
+		cupEndColor   = hardwareMap.get(ColorSensor.class, "cupEndColor");
+
+		cupStartDist  = hardwareMap.get(DistanceSensor.class, "cupStartColor");
+		cupEndDist    = hardwareMap.get(DistanceSensor.class, "cupEndColor");
+
 		intake = new IntakeSystem(hardwareMap.get(DcMotorEx.class, "intake"));
 		turret = new TurretSystem(hardwareMap.get(DcMotorEx.class, "turret"));
 
 		outtake1 = new OuttakeSystem(
 				hardwareMap.get(DcMotorEx.class, "outtake1"),
-				DcMotorSimple.Direction.REVERSE
+				DcMotorSimple.Direction.FORWARD
 		);
 
 		outtake2 = new OuttakeSystem(

@@ -12,25 +12,34 @@ public class OuttakeSystem {
 
 	public static double TICKS_PER_REV = 28;
 
-	// ===== TUNING =====
-	public static double kV = 1.0 / 4700.0;
-	public static double kS = 0.03;
+	public static double kV = 1.0 / 5400.0;
+	public static double kS = 0.0;
 
-	public static double kP = 0.0018;
+	public static double kP = 0.0015; //0.0024 //0.0010
 	public static double kI = 0.0;
-	public static double kD = 0.0004;
+	public static double kD = 0.0; //0.007
 
-	public static double RPM_SLEW = 20000;
+	private double filteredRpm = 0;
+
+	public static double RPM_SLEW = 6000; //50000
 
 	public static double MAX_POWER = 1.0;
 	public static double MIN_POWER = 0.0;
 
-	// ===== Kick =====
-	public static double KICK_PWR = 0.22;
-	public static double KICK_TIME_SEC = 0.22;
-	public static double KICK_ERR_RPM = 120;
-	public static double KICK_DROP_RPM_PER_S = 2000;
+	public static double KICK_PWR = 0.28;
+	public static double KICK_TIME_SEC = 0.28;
+	public static double KICK_ERR_RPM = 90;
+	public static double KICK_DROP_RPM_PER_S = 1400;
 	public static double KICK_MIN_CMD_RPM = 1800;
+
+	public static double OVERSHOOT_START_RPM = 35;
+	public static double OVERSHOOT_FULL_RPM = 120;
+	public static double OVERSHOOT_MIN_FF_SCALE = 0.80;
+
+	public static double FILTER_OLD_WEIGHT = 0.72;
+	public static double FILTER_NEW_WEIGHT = 0.28;
+
+	public static double INTEGRAL_MAX = 8000;
 
 	private double cmdRpm = 0;
 	private double integral = 0;
@@ -60,6 +69,7 @@ public class OuttakeSystem {
 		lastRpm = 0;
 		lastNs = System.nanoTime();
 		kickUntilNs = 0;
+		filteredRpm = 0;
 
 		motor.setPower(0);
 	}
@@ -77,16 +87,21 @@ public class OuttakeSystem {
 		delta = Math.max(-maxDelta, Math.min(maxDelta, delta));
 		cmdRpm += delta;
 
-		double rpm = getRpm();
+		double rawRpm = getRpm();
+		if (filteredRpm == 0 && rawRpm > 0) filteredRpm = rawRpm;
+		filteredRpm = 0.4 * filteredRpm + 0.6 * rawRpm;
+		double rpm = filteredRpm;
+		/*double rawRpm = getRpm();
+		if (filteredRpm == 0 && rawRpm > 0) filteredRpm = rawRpm;
+		filteredRpm = FILTER_OLD_WEIGHT * filteredRpm + FILTER_NEW_WEIGHT * rawRpm;
+		double rpm = filteredRpm;*/
+
 		double err = cmdRpm - rpm;
 
 		double rpmRate = (rpm - lastRpm) / dt;
 		lastRpm = rpm;
 
-		double deriv = (err - lastErr) / dt;
-		lastErr = err;
-
-		integral += err * dt;
+		double dMeas = rpmRate;
 
 		double vbat = 12.0;
 		if (voltageSensor != null) {
@@ -96,29 +111,47 @@ public class OuttakeSystem {
 		double vComp = 12.0 / vbat;
 
 		double ff = (kS + kV * cmdRpm) * vComp;
-		double pid = kP * err + kI * integral + kD * deriv;
 
+		double prelimPid = kP * err - kD * dMeas;
+		double prelimPower = ff + prelimPid;
+
+		boolean canIntegrate = err > 0 && prelimPower < MAX_POWER - 1e-6;
+		if (canIntegrate) {
+			integral += err * dt;
+			if (integral > INTEGRAL_MAX) integral = INTEGRAL_MAX;
+			if (integral < -INTEGRAL_MAX) integral = -INTEGRAL_MAX;
+		}
+
+		double pid = kP * err + kI * integral - kD * dMeas;
 		double power = ff + pid;
 
-		boolean wantKick =
+		/*boolean wantKick =
 				cmdRpm >= KICK_MIN_CMD_RPM &&
 						(err > KICK_ERR_RPM || rpmRate < -KICK_DROP_RPM_PER_S);
 
 		if (wantKick) {
-			kickUntilNs = Math.max(kickUntilNs,
-					now + (long)(KICK_TIME_SEC * 1e9));
+			kickUntilNs = Math.max(kickUntilNs, now + (long) (KICK_TIME_SEC * 1e9));
 		}
 
 		if (now < kickUntilNs) {
 			power += KICK_PWR;
-		}
+		}*/
 
-		if (err < -150) {
-			power = Math.min(power, ff * 0.6);
-		}
+		/*if (err < 0) {
+			double overshoot = -err;
+			if (overshoot > OVERSHOOT_START_RPM) {
+				double t = (overshoot - OVERSHOOT_START_RPM) / Math.max(1.0, (OVERSHOOT_FULL_RPM - OVERSHOOT_START_RPM));
+				if (t > 1.0) t = 1.0;
+				double ffScale = 1.0 - t * (1.0 - OVERSHOOT_MIN_FF_SCALE);
+				double maxAllowed = ff * ffScale;
+				if (power > maxAllowed) power = maxAllowed;
+			}
+		}*/
 
 		power = Math.max(MIN_POWER, Math.min(MAX_POWER, power));
 		motor.setPower(power);
+
+		lastErr = err;
 	}
 
 	public double getRpm() {
@@ -128,7 +161,7 @@ public class OuttakeSystem {
 
 	public void triggerKick() {
 		long now = System.nanoTime();
-		kickUntilNs = now + (long)(KICK_TIME_SEC * 1e9);
+		kickUntilNs = now + (long) (KICK_TIME_SEC * 1e9);
 	}
 
 	public void stop() {

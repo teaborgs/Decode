@@ -22,8 +22,8 @@ import org.firstinspires.ftc.teamcode.systems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.systems.OuttakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@Autonomous(name = "🔵🔵Far_12🔵🔵", group = "Auto")
-public class Auto_Blue_Far_12 extends BaseOpMode {
+@Autonomous(name = "🔵🔵Far_12_TEST🔵🔵", group = "Auto")
+public class Auto_Blue_Far_12_TEST extends BaseOpMode {
 
     private RobotHardware robot;
 
@@ -114,7 +114,7 @@ public class Auto_Blue_Far_12 extends BaseOpMode {
     }
 
     private static class AimTurretWithLimelightAction implements Action {
-        private final Auto_Blue_Far_12 op;
+        private final Auto_Blue_Far_12_TEST op;
         private final RobotHardware robot;
         private final double kP, minPower, maxPower, lockDeg, dir, hold;
         private final long timeout;
@@ -122,7 +122,7 @@ public class Auto_Blue_Far_12 extends BaseOpMode {
         private long start;
 
         AimTurretWithLimelightAction(
-                Auto_Blue_Far_12 op,
+                Auto_Blue_Far_12_TEST op,
                 RobotHardware robot,
                 double kP,
                 double minPower,
@@ -219,31 +219,34 @@ public class Auto_Blue_Far_12 extends BaseOpMode {
                         ))
                         .build();
 
-        Action startToSpike1Start =
-                robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.START)
-                        .strafeTo(new Vector2d(
-                                WAYPOINTS_BLUE_FAR.PICKUP.position.x,
-                                WAYPOINTS_BLUE_FAR.PICKUP.position.y
-                        ))
-                        .build();
 
-        Action goToPickup = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUPF)
+
+
+        Action pickupSpike1 = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUPF)
                 .setTangent(Math.toRadians(0))
                 .lineToX(WAYPOINTS_BLUE_FAR.PICKUPL.position.x)
                 .build();
-
-        Action backToStartSpike1 =
-                robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.START)
-                        .strafeTo(new Vector2d(
-                                WAYPOINTS_BLUE_FAR.PICKUP.position.x,
-                                WAYPOINTS_BLUE_FAR.PICKUP.position.y
-                        ))
-                        .build();
 
         AccelConstraint pickupAccel = new ProfileAccelConstraint(
                 MecanumDrive.PARAMS.minProfileAccel,
                 30
         );
+
+        Action startToSpike1Start =
+                robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUP)
+                        .strafeTo(new Vector2d(
+                                WAYPOINTS_BLUE_FAR.PICKUP.position.x,
+                                WAYPOINTS_BLUE_FAR.PICKUP.position.y-7
+                        ))
+                        .build();
+
+        Action backToStartSpike1 =
+                robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUPL)
+                        .strafeTo(new Vector2d(
+                                WAYPOINTS_BLUE_FAR.START.position.x,
+                                WAYPOINTS_BLUE_FAR.START.position.y
+                        ))
+                        .build();
 
 
 
@@ -422,10 +425,8 @@ public class Auto_Blue_Far_12 extends BaseOpMode {
                                 setAutonShooterAngle,
 
                                 // burst 1
-                                shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
-                                shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
                                 shootArtifact,
-                                WaitFor(0.5),
+                                WaitFor(0.7),
 
                                 stopShooting,
                                 shooter_off,
@@ -435,7 +436,7 @@ public class Auto_Blue_Far_12 extends BaseOpMode {
 
                                 backToStart,
                                 startIntake, WaitFor(0.1),
-                                HumanPark, WaitFor(0.6),
+                                HumanPark, WaitFor(0.75),
                                 stopIntake,
 
                                 // ===== SHOOT 2 =====
@@ -449,16 +450,34 @@ public class Auto_Blue_Far_12 extends BaseOpMode {
                                 setAutonShooterAngle,
 
                                 // burst 2
-                                shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
-                                shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
                                 shootArtifact,
-                                WaitFor(0.5),
-
+                                WaitFor(0.7),
                                 stopShooting,
                                 shooter_off,
                                 WaitFor(0.2),
 
-                                // ===== HUMAN CYCLE 2 (pastrez cum ai tu) =====
+                                //shoot spike1
+                                RunInParallel(startToSpike1Start, startIntake),
+                                pickupSpike1,
+                                WaitFor(0.3),
+                                stopIntake,
+
+                                RunInParallel(
+                                        backToStartSpike1,
+                                        packet -> { shooterRpmCmd = 3300; return shooter_on.run(packet); }
+                                ),
+                                waitUntilShooterRpm(3300, 150, 700),
+
+                                newAimTurretLLNEW(),
+                                setAutonShooterAngle,
+
+                                WaitFor(0.1),
+                                shootArtifact,
+                                WaitFor(0.7),
+                                stopShooting,
+                                shooter_off,
+
+                                // ===== HUMAN CYCLE 2 ====
 
                                 startIntake, WaitFor(0.2),
                                 HumanPark2, WaitFor(0.6),
@@ -475,10 +494,8 @@ public class Auto_Blue_Far_12 extends BaseOpMode {
                                 setAutonShooterAngle,
 
                                 // burst 3
-                                shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
-                                shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
                                 shootArtifact,
-                                WaitFor(0.5),
+                                WaitFor(0.7),
 
                                 stopShooting,
                                 shooter_off,
@@ -501,10 +518,8 @@ public class Auto_Blue_Far_12 extends BaseOpMode {
                                 setAutonShooterAngle,
 
                                 // burst 3
-                                shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
-                                shootArtifact, WaitFor(0.25), stopShooting, WaitFor(0.25),
                                 shootArtifact,
-                                WaitFor(0.5),
+                                WaitFor(0.7),
 
                                 stopShooting,
                                 shooter_off,

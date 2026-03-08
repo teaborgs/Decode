@@ -29,6 +29,12 @@ public class TransferSystem extends AbstractSystem
 		transfer.setPower(-1.0);
 	}
 
+	public void reverse()
+	{
+		transfer.setPower(1.0);
+	}
+
+
 
 	public void stop()
 	{
