@@ -22,8 +22,8 @@ import org.firstinspires.ftc.teamcode.systems.IntakeSystem;
 import org.firstinspires.ftc.teamcode.systems.OuttakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@Autonomous(name = "🔵🔵Far_12_TEST🔵🔵", group = "Auto")
-public class Auto_Blue_Far_12_TEST extends BaseOpMode {
+@Autonomous(name = "🔵🔵Far_15_Spike1🔵🔵", group = "Auto")
+public class Auto_Blue_Far_15 extends BaseOpMode {
 
     private RobotHardware robot;
 
@@ -39,7 +39,6 @@ public class Auto_Blue_Far_12_TEST extends BaseOpMode {
     private double shooterRpmCmd = 4800;
     private boolean autonDone = false;
 
-    // ===== Shooter debug timing (ca Far_9) =====
     private long shooterOnMs = -1;
     private int shootBurstIndex = 0;
 
@@ -85,7 +84,7 @@ public class Auto_Blue_Far_12_TEST extends BaseOpMode {
     private Action newAimTurretLLSecond() { return newAimTurretLL(); }
     private Action newAimTurretLLFinal()  { return newAimTurretLL(); }
 
-    /** Wait până când avgRPM e aproape de target (ca în Far_9), cu timeout. */
+
     private Action waitUntilShooterRpm(double targetRpm, double tolRpm, long timeoutMs) {
         return new Action() {
             boolean init = false;
@@ -114,7 +113,7 @@ public class Auto_Blue_Far_12_TEST extends BaseOpMode {
     }
 
     private static class AimTurretWithLimelightAction implements Action {
-        private final Auto_Blue_Far_12_TEST op;
+        private final Auto_Blue_Far_15 op;
         private final RobotHardware robot;
         private final double kP, minPower, maxPower, lockDeg, dir, hold;
         private final long timeout;
@@ -122,7 +121,7 @@ public class Auto_Blue_Far_12_TEST extends BaseOpMode {
         private long start;
 
         AimTurretWithLimelightAction(
-                Auto_Blue_Far_12_TEST op,
+                Auto_Blue_Far_15 op,
                 RobotHardware robot,
                 double kP,
                 double minPower,
@@ -273,7 +272,7 @@ public class Auto_Blue_Far_12_TEST extends BaseOpMode {
         Action HumanToStart = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.HUMAN)
                 .splineToConstantHeading(
                         new Vector2d(
-                                WAYPOINTS_BLUE_FAR.START.position.x + 18,
+                                WAYPOINTS_BLUE_FAR.START.position.x + 20,
                                 WAYPOINTS_BLUE_FAR.START.position.y
                         ),
                         WAYPOINTS_BLUE_FAR.START.heading.toDouble()
@@ -283,7 +282,7 @@ public class Auto_Blue_Far_12_TEST extends BaseOpMode {
         Action HumanToStart2 = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.HUMAN)
                 .splineToConstantHeading(
                         new Vector2d(
-                                WAYPOINTS_BLUE_FAR.START.position.x + 18,
+                                WAYPOINTS_BLUE_FAR.START.position.x + 20,
                                 WAYPOINTS_BLUE_FAR.START.position.y
                         ),
                         WAYPOINTS_BLUE_FAR.START.heading.toDouble()
@@ -293,7 +292,7 @@ public class Auto_Blue_Far_12_TEST extends BaseOpMode {
         Action HumanToStart3 = robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.HUMAN)
                 .splineToConstantHeading(
                         new Vector2d(
-                                WAYPOINTS_BLUE_FAR.START.position.x + 18,
+                                WAYPOINTS_BLUE_FAR.START.position.x + 20,
                                 WAYPOINTS_BLUE_FAR.START.position.y
                         ),
                         WAYPOINTS_BLUE_FAR.START.heading.toDouble()
@@ -480,7 +479,7 @@ public class Auto_Blue_Far_12_TEST extends BaseOpMode {
                                 // ===== HUMAN CYCLE 2 ====
 
                                 startIntake, WaitFor(0.2),
-                                HumanPark2, WaitFor(0.6),
+                                HumanPark2, WaitFor(0.7),
                                 stopIntake, WaitFor(0.1),
 
                                 // ===== SHOOT 3 =====
@@ -504,7 +503,7 @@ public class Auto_Blue_Far_12_TEST extends BaseOpMode {
                                 //cycle 2
 
                                 startIntake, WaitFor(0.15),
-                                HumanPark3, WaitFor(0.6),
+                                HumanPark3, WaitFor(0.7),
                                 stopIntake, WaitFor(0.1),
 
                                 // ===== SHOOT 3 =====
