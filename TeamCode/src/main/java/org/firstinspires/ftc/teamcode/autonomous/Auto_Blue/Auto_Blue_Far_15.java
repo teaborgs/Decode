@@ -242,7 +242,7 @@ public class Auto_Blue_Far_15 extends BaseOpMode {
         Action backToStartSpike1 =
                 robot.drivetrain.actionBuilder(WAYPOINTS_BLUE_FAR.PICKUPL)
                         .strafeTo(new Vector2d(
-                                WAYPOINTS_BLUE_FAR.START.position.x,
+                                WAYPOINTS_BLUE_FAR.START.position.x+5,
                                 WAYPOINTS_BLUE_FAR.START.position.y
                         ))
                         .build();
