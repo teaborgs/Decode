@@ -56,11 +56,11 @@ public class TurretSystem extends AbstractSystem {
 				break;
 			case SLOW_CW:
 				turretMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-				turretMotor.setPower(0.25);
+				turretMotor.setPower(1.0);
 				break;
 			case SLOW_CCW:
 				turretMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-				turretMotor.setPower(-0.25);
+				turretMotor.setPower(-1.0);
 				break;
 			case STOP:
 			default:

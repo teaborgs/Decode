@@ -32,7 +32,7 @@ public class Auto_BLUE_Close_12GATE extends BaseOpMode {
     private static final double SHOOT_SAFE_IN = 11.0;
 
     private boolean shooterEnabled = false;
-    private double shooterRpmCmd = 2200;
+    private double shooterRpmCmd = 2450;
     private boolean autonDone = false;
 
     private boolean started = false;
@@ -396,7 +396,7 @@ public class Auto_BLUE_Close_12GATE extends BaseOpMode {
         };
 
         Action shooter_on = packet -> {
-            shooterRpmCmd = 2200;
+            shooterRpmCmd = 2450;
             shooterEnabled = true;
 
             robot.outtake1.triggerKick();

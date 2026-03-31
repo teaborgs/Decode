@@ -18,8 +18,8 @@ import org.firstinspires.ftc.teamcode.systems.IntakeSystem.IntakeDirection;
 import org.firstinspires.ftc.teamcode.systems.OuttakeSystem;
 import org.firstinspires.ftc.teamcode.systems.TumblerSystem;
 
-@TeleOp(name = "🔵🔵decodeaza-mi-l faneee🔵🔵", group = "TeleOp")
-public final class decodeFANE extends BaseOpMode {
+@TeleOp(name = "🔴🔴decodeaza-mi-l faneee🔴🔴", group = "TeleOp")
+public final class deocdeFANE_rosu extends BaseOpMode {
 	private InputSystem driveInput, armInput;
 
 	private RobotHardware robot;
@@ -67,11 +67,11 @@ public final class decodeFANE extends BaseOpMode {
 	private static final double RESET_Y_IN = 0.0;
 	private static final double RESET_H_DEG = 0.0;
 
-	private static final double ANCHOR_A_X = -4.205;
-	private static final double ANCHOR_A_Y = -47.2062;
+	private static final double ANCHOR_A_X = -2.78;
+	private static final double ANCHOR_A_Y = 52.13;
 
-	private static final double ANCHOR_B_X = 40.3;
-	private static final double ANCHOR_B_Y = -112.5;
+	private static final double ANCHOR_B_X = 41.06;
+	private static final double ANCHOR_B_Y = 114.76;
 
 	private boolean anchorAActive = false;
 	private boolean anchorBActive = false;
@@ -178,7 +178,7 @@ public final class decodeFANE extends BaseOpMode {
 
 		OuttakeSystem.TICKS_PER_REV = 28;
 
-		robot.limelight.pipelineSwitch(0);
+		robot.limelight.pipelineSwitch(1);
 
 		DcMotorEx turretMotor = robot.turret.getMotor();
 		turretMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);

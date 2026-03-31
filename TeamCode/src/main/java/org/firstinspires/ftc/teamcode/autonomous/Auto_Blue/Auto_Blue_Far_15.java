@@ -387,8 +387,8 @@ public class Auto_Blue_Far_15 extends BaseOpMode {
         };
 
         Action turretToTicks = robot.turret.goToTicksAction(
-                212, // target
-                0.6,                // power (0..1)
+                240, // target
+                0.6,                //power (0..1)
                 8,                  // toleranta ticks
                 1200,               // timeout ms
                 TURRET_HOLD_POWER   // hold power dupa ce ajunge
